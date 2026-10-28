@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS workspaces(id uuid PRIMARY KEY, name text NOT NULL);
+CREATE TABLE IF NOT EXISTS memberships(workspace_id uuid REFERENCES workspaces(id), user_id text NOT NULL, role text NOT NULL, PRIMARY KEY(workspace_id,user_id));
+CREATE TABLE IF NOT EXISTS routing_rules(workspace_id uuid REFERENCES workspaces(id), domain text NOT NULL, approver_role text NOT NULL, PRIMARY KEY(workspace_id,domain));
+CREATE TABLE IF NOT EXISTS workflow_runs(id uuid PRIMARY KEY, workspace_id uuid REFERENCES workspaces(id), kind text NOT NULL CHECK(kind IN ('adr','feature')), stage text NOT NULL, revision integer NOT NULL DEFAULT 1, record_id uuid NOT NULL, owner_id text NOT NULL, created_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS tasks(id uuid PRIMARY KEY, workspace_id uuid REFERENCES workspaces(id), run_id uuid REFERENCES workflow_runs(id), assignee_id text NOT NULL, revision integer NOT NULL, kind text NOT NULL, status text NOT NULL DEFAULT 'ready', response jsonb, UNIQUE(run_id,assignee_id,revision,kind));
+CREATE TABLE IF NOT EXISTS agent_jobs(id uuid PRIMARY KEY, workspace_id uuid REFERENCES workspaces(id), run_id uuid REFERENCES workflow_runs(id), owner_id text NOT NULL, instruction text NOT NULL, status text NOT NULL DEFAULT 'queued', lease_token uuid, lease_until timestamptz, result jsonb);
+CREATE TABLE IF NOT EXISTS brain_index(workspace_id uuid REFERENCES workspaces(id), record_id uuid, revision integer NOT NULL, area text NOT NULL, title text NOT NULL, body text NOT NULL, PRIMARY KEY(workspace_id,record_id));
+CREATE TABLE IF NOT EXISTS payments(workspace_id uuid REFERENCES workspaces(id), external_id text NOT NULL, data jsonb NOT NULL, PRIMARY KEY(workspace_id,external_id));
+CREATE TABLE IF NOT EXISTS events(id bigserial PRIMARY KEY, workspace_id uuid REFERENCES workspaces(id), kind text NOT NULL, payload jsonb NOT NULL, created_at timestamptz DEFAULT now());

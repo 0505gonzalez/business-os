@@ -1,0 +1,76 @@
+{
+  "name": "business-os",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --import tsx apps/api/src/index.ts",
+    "worker": "node --env-file-if-exists=.env --import tsx apps/worker/src/index.ts",
+    "desktop": "electron .",
+    "build": "tsc --noEmit && vite build --config apps/desktop/vite.config.ts && node scripts/build-desktop.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "migrate": "node --env-file-if-exists=.env --import tsx packages/backend/src/migrate.ts",
+    "test:integration": "node --import tsx --test --test-concurrency=1 tests/integration/*.test.ts",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make",
+    "build:server": "node scripts/build-server.mjs",
+    "start:api": "node dist/server/api.mjs",
+    "start:worker": "node dist/server/worker.mjs",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx,mjs}\" \"scripts/*.mjs\"",
+    "check:format": "prettier --check \"apps/**/*.{ts,tsx,css}\" \"packages/**/*.ts\" \"tests/**/*.{ts,tsx,mjs}\" \"scripts/*.mjs\"",
+    "test:agent": "node --import tsx tests/support/agent-smoke.ts --inference",
+    "test:ui": "node tests/support/ui-smoke.mjs",
+    "test:desktop": "node tests/support/desktop-smoke.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.312",
+    "@aws-sdk/client-s3": "3.1159.0",
+    "@clerk/backend": "3.26.4",
+    "@clerk/electron": "0.1.7",
+    "@earendil-works/pi-coding-agent": "1.4.0",
+    "@fastify/cors": "11.3.1",
+    "@langchain/langgraph": "1.5.3",
+    "@langchain/langgraph-checkpoint": "1.2.1",
+    "@langchain/langgraph-checkpoint-postgres": "1.1.2",
+    "electron-store": "8.2.0",
+    "fastify": "5.12.7",
+    "pg": "8.23.1",
+    "pi-claude-bridge": "0.9.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "typebox": "1.4.3",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-zip": "8.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "45.1.0",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  },
+  "version": "0.1.0",
+  "description": "Business OS desktop collaboration prototype",
+  "author": "Business OS",
+  "main": "dist/desktop/main.mjs",
+  "config": {
+    "forge": "./forge.config.cjs"
+  },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": {
+      "undici": "^8.12.2"
+    }
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

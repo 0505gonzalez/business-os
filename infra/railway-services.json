@@ -1,0 +1,21 @@
+{
+  "api": {
+    "name": "business-os-api",
+    "settings": {
+      "dockerfilePath": "infra/Dockerfile",
+      "preDeployCommand": ["node dist/server/migrate.mjs"],
+      "startCommand": "node dist/server/api.mjs",
+      "healthcheckPath": "/health",
+      "restartPolicyType": "ON_FAILURE"
+    }
+  },
+  "worker": {
+    "name": "business-os-worker",
+    "settings": {
+      "dockerfilePath": "infra/Dockerfile",
+      "preDeployCommand": ["node dist/server/migrate.mjs"],
+      "startCommand": "node dist/server/worker.mjs",
+      "restartPolicyType": "ON_FAILURE"
+    }
+  }
+}
