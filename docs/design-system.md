@@ -6,7 +6,7 @@ The tokens are a port of Kiro Crew's light theme with its purple accent, so the 
 
 ## Layout
 
-The window is a white `--bg` canvas that extends under the macOS title bar (`titleBarStyle: hiddenInset`). The top strip (`--titlebar-h`, 40px) is a drag region with a centered quick-prompt box that opens the agent panel and sends the text, and on the right the collapsed agent pill (status while the agent works) and the profile button. Two bordered panels sit on the canvas with an 8px gutter, and the content between them sits directly on the white background, as in Kiro Crew:
+The window is a white `--bg` canvas that extends under the macOS title bar (`titleBarStyle: hiddenInset`). The top strip (`--titlebar-h`, 40px) is a drag region with a centered quick-prompt box (⌘K focuses it) that opens the agent panel and sends the text, and on the right the collapsed agent pill (status while the agent works) and the profile button. Two bordered panels sit on the canvas with an 8px gutter, and the content between them sits directly on the white background, as in Kiro Crew:
 
 - **Sidebar** (`.sidebar`): a `--panel` (#fafafa) bordered panel with the wordmark, workspace switcher, section nav with icons, Settings pinned at the bottom. The selected item tints with `--accent-subtle`.
 - **Content** (`.content`): no panel chrome, just a header row (`.page-title`, `.page-subtitle`, `.page-actions`) under a hairline. Content is not boxed: lists are plain rows, master-detail splits on a hairline, and Team and Settings are hairline sections. The Workflows canvas is a dotted field on the panel whose edges fade out; only its nodes are cards.

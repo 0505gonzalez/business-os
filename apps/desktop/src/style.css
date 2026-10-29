@@ -436,6 +436,19 @@ label > textarea {
   box-shadow: none;
   border: 0;
 }
+.titlebar-command kbd {
+  font-family: inherit;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+  padding: 1px var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--bg-accent);
+}
+.titlebar-command:focus-within kbd {
+  display: none;
+}
 .titlebar-end {
   display: flex;
   align-items: center;

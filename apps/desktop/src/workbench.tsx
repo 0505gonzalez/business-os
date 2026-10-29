@@ -97,6 +97,18 @@ export function Workbench({
   const chatMessages = useRef<HTMLDivElement>(null);
   const followChat = useRef(true);
   const detailRef = useRef<HTMLElement>(null);
+  const quickRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        quickRef.current?.focus();
+        quickRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   useEffect(() => {
     const node = chatMessages.current;
     if (node && followChat.current) node.scrollTop = node.scrollHeight;
@@ -504,6 +516,7 @@ export function Workbench({
         >
           <Icon name="sparkles" size={14} />
           <input
+            ref={quickRef}
             aria-label="Ask your agent"
             placeholder={
               agentReady ? "Ask your agent…" : "Connecting your agent…"
@@ -512,6 +525,7 @@ export function Workbench({
             value={quick}
             onChange={(e) => setQuick(e.target.value)}
           />
+          <kbd aria-hidden="true">⌘K</kbd>
         </form>
         <div className="titlebar-end">{account ?? <Avatar />}</div>
       </div>
