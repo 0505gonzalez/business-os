@@ -1,13 +1,42 @@
 import { WorkflowRules } from "./workflow-rules.js";
 import { Modal } from "./modal.js";
-import { Markdown } from "./markdown.js";
 import { Team } from "./team.js";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ApiClient } from "../../../packages/api-client/src/index.js";
 import { commandSchema } from "../../../packages/contracts/src/index.js";
 import { Settings } from "./settings.js";
 import { PlanningMapView } from "./planning-map.js";
+import { Icon } from "./icons.js";
+import { Sidebar, Avatar, PageHeader, EmptyState, modKey } from "./shell.js";
+import { AgentPanel } from "./agent-panel.js";
+import { WorkflowGraph, adrStages, featureStages } from "./workflow-graph.js";
 type Row = Record<string, any>;
+function money(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "USD",
+    }).format(amount / 100);
+  } catch {
+    return `${(amount / 100).toFixed(2)} ${currency}`;
+  }
+}
+function paymentTone(state?: string) {
+  const s = (state ?? "").toUpperCase();
+  if (s === "SUCCEEDED") return "success";
+  if (["FAILED", "CANCELED", "CANCELLED", "REVERSED"].includes(s))
+    return "danger";
+  if (s === "PENDING") return "warning";
+  return "";
+}
+function spaced(value: string) {
+  return value.replace(/([A-Z])/g, " $1").replaceAll("_", " ");
+}
+const isoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+function sentence(value: string) {
+  const text = value.trim();
+  return text ? text[0]!.toUpperCase() + text.slice(1).toLowerCase() : text;
+}
 export function Workbench({
   client,
   workspaceId,
@@ -57,6 +86,8 @@ export function Workbench({
     [status, setStatus] = useState("Idle"),
     [guiding, setGuiding] = useState(true),
     [guided, setGuided] = useState(false);
+  const [view, setView] = useState<"canvas" | "list">("canvas");
+  const [quick, setQuick] = useState("");
   const [paymentRows, setPaymentRows] = useState<Row[]>([]);
   const [paymentState, setPaymentState] = useState<
     "loading" | "ready" | "error"
@@ -65,6 +96,19 @@ export function Workbench({
   const [paymentAttempt, setPaymentAttempt] = useState(0);
   const chatMessages = useRef<HTMLDivElement>(null);
   const followChat = useRef(true);
+  const detailRef = useRef<HTMLElement>(null);
+  const quickRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        quickRef.current?.focus();
+        quickRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   useEffect(() => {
     const node = chatMessages.current;
     if (node && followChat.current) node.scrollTop = node.scrollHeight;
@@ -209,79 +253,328 @@ export function Workbench({
     setVersions([]);
     setGuided(false);
   }
-  async function send() {
-    const text = prompt;
+  function open(id: string) {
+    setSelected(id);
+    setDetail(null);
+    setVersions([]);
+  }
+  function close() {
+    setSelected(undefined);
+    setDetail(null);
+  }
+  async function send(message?: string) {
+    const text = message ?? prompt;
     if (!text.trim() || !agentReady || chatBusy) return;
     followChat.current = true;
     setChatBusy(true);
     setPrompt("");
     setMessages((m) => [...m, { role: "you", text }]);
     setStream("");
+    setError("");
     try {
-      await act(async () => {
-        if (!window.businessOS)
-          throw new Error("The agent runs in the desktop application");
-        const response = await window.businessOS.chat(text);
-        setMessages((m) => [...m, { role: "agent", text: response.text }]);
-      });
+      if (!window.businessOS)
+        throw new Error("The agent runs in the desktop application");
+      const response = await window.businessOS.chat(text);
+      setMessages((m) => [...m, { role: "agent", text: response.text }]);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setStream("");
       setChatBusy(false);
     }
   }
+  /* While the agent runs, the pill reports its work ahead of anything else. */
   const pill = !agentReady
     ? "Connecting agent…"
-    : tasks.length
-      ? `Needs you: ${tasks.length}`
-      : status !== "Idle"
-        ? status
-        : jobs.some((j) => j.status === "failed")
-          ? "Needs attention"
-          : jobs.length
-            ? "Work queued"
-            : "Your agent";
-  return (
-    <main>
-      <aside>
-        <h2>
-          business os<span>{workspaceName}</span>
-        </h2>
-        {workspacePicker}
-        <nav>
-          {["Workflows", "Payments", "Memory", "Team"].map((name) => (
-            <button
-              className={page === name ? "selected" : ""}
-              onClick={() => navigate(name)}
-              key={name}
-            >
-              {name}
-              <span>
-                {name === "Workflows" && tasks.length > 0 ? tasks.length : ""}
-              </span>
-            </button>
-          ))}
-        </nav>
-        <footer>
-          <button
-            aria-label="Workspace settings"
-            onClick={() => navigate("Settings")}
-          >
-            Settings
-          </button>
-          {account}
-        </footer>
-      </aside>
-      <section className={guided ? "guided" : ""}>
-        <header>
-          <span>
-            {workspaceName} / {page}
+    : status !== "Idle" && status !== "Paused"
+      ? status
+      : chatBusy
+        ? "Working…"
+        : tasks.length
+          ? `Needs you: ${tasks.length}`
+          : status === "Paused"
+            ? "Paused"
+            : jobs.some((j) => j.status === "failed")
+              ? "Needs attention"
+              : jobs.length
+                ? "Work queued"
+                : "Agent";
+  const detailTitle = detail
+    ? (detail.input?.title ?? detail.title ?? detail.id)
+    : "";
+  const stages = detail?.kind === "adr" ? adrStages : featureStages;
+  const stageIndex = detail ? stages.indexOf(detail.stage) : -1;
+  useEffect(() => {
+    if (detail && page === "Workflows" && view === "canvas")
+      detailRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+  }, [detail?.id, page, view]);
+  const detailCard = detail && (
+    <article className="detail" ref={detailRef}>
+      <div className="detail-top">
+        <button className="btn ghost sm" onClick={close}>
+          <Icon name="arrow-left" size={16} />
+          Close
+        </button>
+        {page === "Memory" && (
+          <span className="tag">
+            {sentence(detail.area ?? "")} · Revision {detail.revision}
           </span>
-          <span className="tag">Shared workspace</span>
-        </header>
+        )}
+        {page === "Workflows" && (
+          <span className="tag">
+            {detail.kind === "adr" ? "ADR review" : "Feature planning"}
+          </span>
+        )}
+      </div>
+      <h2>{detailTitle}</h2>
+      {page === "Workflows" ? (
+        <>
+          {detail.error && (
+            <div className="setup-notice">
+              <Icon name="alert" size={18} />
+              <div>
+                <strong>Needs attention</strong>
+                <p>{detail.error}</p>
+              </div>
+            </div>
+          )}
+          <div className="stages" aria-label="Workflow stages">
+            {stages.map((stage, i) => (
+              <span
+                key={stage}
+                className={
+                  i < stageIndex
+                    ? "done"
+                    : stage === detail.stage
+                      ? "current"
+                      : ""
+                }
+              >
+                {i < stageIndex && (
+                  <Icon name="check" size={12} strokeWidth={2.5} />
+                )}
+                {sentence(spaced(stage))}
+              </span>
+            ))}
+          </div>
+          <div className="prose">
+            {detail.snapshot?.body ?? detail.input?.body}
+          </div>
+          {detail.snapshot?.map && (
+            <PlanningMapView map={detail.snapshot.map} />
+          )}
+          <WorkflowRules
+            key={detail.id}
+            client={client}
+            base={`${base}/workflows/${detail.id}`}
+            editable={
+              detail.stage !== "completed" &&
+              (role === "owner" || detail.owner_id === userId)
+            }
+            act={act}
+          />
+          <h3>
+            <Icon name="inbox" size={16} />
+            Tasks
+          </h3>
+          {!detail.tasks?.length && <p className="muted">No tasks yet.</p>}
+          <div className="row-list">
+            {detail.tasks?.map((t: Row) => (
+              <div className="row-item" key={t.id}>
+                <span>{t.title}</span>
+                <span className="tag outline">
+                  {t.assignee_id === userId ? "You" : t.assignee_id}
+                </span>
+                <span className="tag">{spaced(t.status ?? "")}</span>
+              </div>
+            ))}
+          </div>
+          <h3>
+            <Icon name="sparkles" size={16} />
+            Agent work
+          </h3>
+          {!detail.jobs?.length && <p className="muted">No agent work yet.</p>}
+          <div className="row-list">
+            {detail.jobs?.map((j: Row) => (
+              <div className="row-item" key={j.id}>
+                <span>{spaced(j.action ?? "")}</span>
+                <span
+                  className={
+                    "tag " +
+                    (j.status === "failed"
+                      ? "danger"
+                      : j.status === "completed"
+                        ? "success"
+                        : "")
+                  }
+                >
+                  {spaced(j.status ?? "")}
+                </span>
+                {j.status === "failed" && (
+                  <button
+                    className="btn sm"
+                    onClick={() =>
+                      void act(() =>
+                        client.request(
+                          `${base}/jobs/${j.id}/retry`,
+                          "POST",
+                          {},
+                        ),
+                      )
+                    }
+                  >
+                    Retry
+                  </button>
+                )}
+                {j.error && <span className="error-text">{j.error}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : page === "Memory" ? (
+        <>
+          <div className="prose">{detail.body}</div>
+          {detail.data?.kind === "prototype" && detail.body.includes("<") && (
+            <iframe
+              title="Prototype preview"
+              sandbox=""
+              srcDoc={detail.body.replace(/^```html\s*|\s*```$/g, "")}
+            />
+          )}
+          {detail.approvals?.length > 0 && (
+            <p className="muted">
+              {detail.approvals
+                .map((a: Row) => `Approved by ${a.userId} (${a.role})`)
+                .join(", ")}
+            </p>
+          )}
+          <div className="actions" style={{ justifyContent: "start" }}>
+            <button
+              className="btn"
+              onClick={() =>
+                void act(async () =>
+                  setVersions(
+                    await client.request(`${base}/memory/${selected}/history`),
+                  ),
+                )
+              }
+            >
+              <Icon name="history" size={15} />
+              Revision history
+            </button>
+          </div>
+          {versions.map((v) => (
+            <details key={v.revision}>
+              <summary>
+                Revision {v.revision} · {sentence(v.area ?? "")}
+              </summary>
+              <div className="prose">{v.body}</div>
+            </details>
+          ))}
+        </>
+      ) : (
+        <dl>
+          {Object.entries(detail)
+            .filter(([, v]) => typeof v !== "object")
+            .map(([k, v]) => (
+              <React.Fragment key={k}>
+                <div>
+                  <dt>{sentence(k.replaceAll("_", " "))}</dt>
+                  <dd>
+                    {k === "amount" && typeof v === "number"
+                      ? money(v, String(detail.currency ?? ""))
+                      : typeof v === "string" && isoDate.test(v)
+                        ? new Date(v).toLocaleString()
+                        : String(v)}
+                  </dd>
+                </div>
+              </React.Fragment>
+            ))}
+        </dl>
+      )}
+    </article>
+  );
+  return (
+    <div className="shell">
+      <div className="titlebar">
+        <form
+          className="titlebar-command"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const text = quick.trim();
+            if (!text) return;
+            e.currentTarget.querySelector("input")?.blur();
+            setQuick("");
+            setExpanded(true);
+            followChat.current = true;
+            void send(text);
+          }}
+        >
+          <Icon name="sparkles" size={14} />
+          <input
+            ref={quickRef}
+            aria-label="Ask your agent"
+            placeholder={
+              agentReady ? "Ask your agent…" : "Connecting your agent…"
+            }
+            disabled={!agentReady}
+            value={quick}
+            onChange={(e) => setQuick(e.target.value)}
+          />
+          <kbd aria-hidden="true">{modKey}K</kbd>
+        </form>
+        <div className="titlebar-end">{account ?? <Avatar />}</div>
+      </div>
+      <Sidebar
+        page={page}
+        onNavigate={navigate}
+        taskCount={tasks.length}
+        workspaceName={workspaceName}
+        workspacePicker={workspacePicker}
+      />
+      <section className={"content" + (guided ? " guided" : "")}>
+        <PageHeader title={page}>
+          {page === "Workflows" && (
+            <>
+              <div className="segmented view-toggle" aria-label="View">
+                <button
+                  className={view === "canvas" ? "selected" : ""}
+                  aria-pressed={view === "canvas"}
+                  onClick={() => setView("canvas")}
+                >
+                  <Icon name="workflow" size={14} />
+                  Canvas
+                </button>
+                <button
+                  className={view === "list" ? "selected" : ""}
+                  aria-pressed={view === "list"}
+                  onClick={() => setView("list")}
+                >
+                  <Icon name="layers" size={14} />
+                  List
+                </button>
+              </div>
+              <button
+                className="btn primary"
+                disabled={busy}
+                onClick={() => setCreating(true)}
+              >
+                <Icon name="plus" size={16} strokeWidth={2.25} />
+                New workflow
+              </button>
+            </>
+          )}
+        </PageHeader>
         {guided && (
           <div className="guide">
-            Your agent opened this for you{" "}
+            <Icon name="navigation" size={14} />
+            Your agent opened this for you
             <button
+              className="btn ghost sm"
               onClick={() => {
                 setGuiding(false);
                 setGuided(false);
@@ -291,41 +584,25 @@ export function Workbench({
             </button>
           </div>
         )}
-        <div className="heading">
-          <div>
-            <h1>{page}</h1>
-            <p>
-              {page === "Workflows"
-                ? "Move decisions forward, together."
-                : page === "Memory"
-                  ? "Your company’s shared understanding."
-                  : page === "Payments"
-                    ? "Payment activity and context."
-                    : "People and workspace roles."}
-            </p>
-          </div>
-          {page === "Workflows" && (
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={() => setCreating(true)}
-            >
-              + New workflow
-            </button>
-          )}
-        </div>
         {error && (
           <div className="error" role="alert">
-            {error}
-            <button onClick={() => setError("")}>Dismiss</button>
+            <Icon name="alert" size={16} />
+            <span>{error}</span>
+            <button className="btn ghost sm" onClick={() => setError("")}>
+              Dismiss
+            </button>
           </div>
         )}
         {page === "Workflows" && tasks.length > 0 && (
           <div className="attention">
-            <span className="eyebrow">ASSIGNED TO YOU</span>
+            <div className="attention-head">
+              <Icon name="inbox" size={16} />
+              <span className="eyebrow">Assigned to you</span>
+            </div>
             {tasks.map((t) => (
               <button
                 key={t.id}
+                className="task"
                 onClick={() => {
                   setTask(t);
                   setDetail(null);
@@ -334,14 +611,17 @@ export function Workbench({
                 }}
               >
                 <strong>{t.title}</strong>
-                <span>{t.kind.replaceAll("_", " ")} →</span>
+                <span className="tag">
+                  {sentence(t.kind.replaceAll("_", " "))}
+                </span>
+                <Icon name="chevron-right" size={16} />
               </button>
             ))}
           </div>
         )}
         {page === "Memory" && (
           <div className="filters">
-            <div className="areas">
+            <div className="segmented">
               {["temporal", "canonical", "procedures", "context"].map((a) => (
                 <button
                   key={a}
@@ -351,47 +631,84 @@ export function Workbench({
                     setSelected(undefined);
                   }}
                 >
-                  {a}
+                  {sentence(a)}
                 </button>
               ))}
             </div>
-            <input
-              aria-label="Search memory"
-              placeholder="Search memory…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <div className="search">
+              <Icon name="search" size={16} />
+              <input
+                aria-label="Search memory"
+                placeholder="Search memory…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
           </div>
         )}
         {page === "Team" ? (
           <Team client={client} base={base} userId={userId} role={role} />
         ) : page === "Settings" ? (
-          <Settings client={client} base={base} role={role} act={act} />
+          <Settings
+            client={client}
+            base={base}
+            role={role}
+            act={act}
+            workspaceName={workspaceName}
+          />
+        ) : page === "Workflows" &&
+          view === "canvas" &&
+          !viewLoading &&
+          !viewFailed &&
+          rows.length > 0 ? (
+          <div className="stack">
+            <WorkflowGraph
+              rows={rows}
+              tasks={tasks}
+              selected={selected}
+              onSelect={open}
+              compact={Boolean(detail)}
+            />
+            {detailCard}
+          </div>
         ) : (
           <div className="content-grid">
             <div className="list">
               {page === "Payments" && paymentState === "loading" ? (
-                <article role="status" aria-live="polite">
-                  <h3>Loading transactions…</h3>
+                <EmptyState
+                  icon="card"
+                  title="Loading transactions…"
+                  role="status"
+                >
                   <p>Fetching the latest payment activity.</p>
-                </article>
+                </EmptyState>
               ) : page === "Payments" && paymentState === "error" ? (
-                <article role="alert">
-                  <h3>Couldn’t load transactions</h3>
+                <EmptyState
+                  icon="alert"
+                  title="Couldn’t load transactions"
+                  role="alert"
+                >
                   <p>{paymentError}</p>
-                  <button onClick={() => setPaymentAttempt((n) => n + 1)}>
+                  <button
+                    className="btn"
+                    onClick={() => setPaymentAttempt((n) => n + 1)}
+                  >
+                    <Icon name="refresh" size={15} />
                     Try again
                   </button>
-                </article>
+                </EmptyState>
               ) : page !== "Payments" && viewLoading ? (
-                <article role="status">
-                  <h3>Loading {page.toLowerCase()}…</h3>
+                <EmptyState
+                  icon={page === "Workflows" ? "workflow" : "book"}
+                  title={`Loading ${page.toLowerCase()}…`}
+                  role="status"
+                >
                   <p>Getting your workspace up to date.</p>
-                </article>
+                </EmptyState>
               ) : page !== "Payments" && viewFailed ? (
-                <article>
-                  <h3>Couldn’t load this view</h3>
+                <EmptyState icon="alert" title="Couldn’t load this view">
                   <button
+                    className="btn"
                     onClick={() => {
                       setViewLoading(true);
                       void load()
@@ -399,18 +716,27 @@ export function Workbench({
                         .finally(() => setViewLoading(false));
                     }}
                   >
+                    <Icon name="refresh" size={15} />
                     Try again
                   </button>
-                </article>
+                </EmptyState>
               ) : visibleRows.length === 0 ? (
-                <article>
-                  <h3>
-                    {page === "Workflows"
+                <EmptyState
+                  icon={
+                    page === "Workflows"
+                      ? "workflow"
+                      : page === "Payments"
+                        ? "card"
+                        : "book"
+                  }
+                  title={
+                    page === "Workflows"
                       ? "Start with a decision"
                       : page === "Payments"
                         ? "No payments yet"
-                        : "No records in this area"}
-                  </h3>
+                        : "No records in this area"
+                  }
+                >
                   <p>
                     {page === "Workflows"
                       ? "Propose an ADR or explore a feature with your team."
@@ -418,205 +744,88 @@ export function Workbench({
                         ? "No transactions were returned by your connected payment account."
                         : "Workflow proposals and findings appear here as work progresses."}
                   </p>
-                </article>
+                </EmptyState>
               ) : (
                 visibleRows.map((row) => {
                   const id = row.id ?? row.record_id ?? row.external_id;
+                  const state = row.data?.state as string | undefined;
                   return (
                     <button
-                      className={"record " + (selected === id ? "active" : "")}
+                      className={"record" + (selected === id ? " active" : "")}
                       key={id}
-                      onClick={() => {
-                        setSelected(id);
-                        setDetail(null);
-                        setVersions([]);
-                      }}
+                      onClick={() => open(id)}
                     >
-                      <span className="eyebrow">
-                        {row.kind ?? row.area ?? row.data?.state}
+                      <span className="record-icon" aria-hidden="true">
+                        <Icon
+                          name={
+                            page === "Workflows"
+                              ? row.kind === "adr"
+                                ? "file"
+                                : "compass"
+                              : page === "Payments"
+                                ? "card"
+                                : "book"
+                          }
+                          size={16}
+                        />
                       </span>
-                      <strong>
-                        {row.input?.title ?? row.title ?? row.external_id}
-                      </strong>
-                      <small>
-                        {row.stage?.replaceAll("_", " ") ??
-                          (row.data
-                            ? `${((row.data.amount ?? 0) / 100).toFixed(2)} ${row.data.currency ?? ""}`
-                            : `Revision ${row.revision}`)}
-                      </small>
-                      {row.error && (
-                        <span className="error-text">{row.error}</span>
+                      <span className="record-body">
+                        <strong>
+                          {row.input?.title ?? row.title ?? row.external_id}
+                        </strong>
+                        <small>
+                          {page === "Workflows"
+                            ? row.kind === "adr"
+                              ? "ADR review"
+                              : "Feature planning"
+                            : page === "Memory"
+                              ? `${sentence(row.area ?? "")} · Revision ${row.revision}`
+                              : `${row.data?.currency ?? "Payment"} · ${money(
+                                  row.data?.amount ?? 0,
+                                  row.data?.currency,
+                                )}`}
+                        </small>
+                        {row.error && (
+                          <span className="error-text">{row.error}</span>
+                        )}
+                      </span>
+                      {page === "Workflows" ? (
+                        <span
+                          className={
+                            "tag " +
+                            (row.stage === "completed" ? "success" : "outline")
+                          }
+                        >
+                          {sentence(spaced(row.stage ?? ""))}
+                        </span>
+                      ) : page === "Payments" ? (
+                        <span className={"tag " + paymentTone(state)}>
+                          {sentence(state ?? "unknown")}
+                        </span>
+                      ) : (
+                        <Icon
+                          name="chevron-right"
+                          size={16}
+                          className="record-chevron"
+                        />
                       )}
                     </button>
                   );
                 })
               )}
             </div>
-            {detail && (
-              <article className="detail">
-                <button
-                  className="quiet"
-                  onClick={() => {
-                    setSelected(undefined);
-                    setDetail(null);
-                  }}
-                >
-                  ← Close
-                </button>
-                <h2>{detail.input?.title ?? detail.title ?? detail.id}</h2>
-                {page === "Workflows" ? (
-                  <>
-                    {detail.error && (
-                      <div className="setup-notice">
-                        <div>
-                          <strong>Needs attention</strong>
-                          <p>{detail.error}</p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="stages">
-                      {(detail.kind === "adr"
-                        ? ["classification", "review", "completed"]
-                        : [
-                            "interview",
-                            "createMap",
-                            "exploration",
-                            "synthesis",
-                            "classification",
-                            "review",
-                            "technicalInterview",
-                            "design",
-                            "peerReview",
-                            "completed",
-                          ]
-                      ).map((stage) => (
-                        <span
-                          key={stage}
-                          className={detail.stage === stage ? "current" : ""}
-                        >
-                          {stage}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="prose">
-                      {detail.snapshot?.body ?? detail.input?.body}
-                    </div>
-                    {detail.snapshot?.map && (
-                      <PlanningMapView map={detail.snapshot.map} />
-                    )}
-                    <WorkflowRules
-                      key={detail.id}
-                      client={client}
-                      base={`${base}/workflows/${detail.id}`}
-                      editable={
-                        detail.stage !== "completed" &&
-                        (role === "owner" || detail.owner_id === userId)
-                      }
-                      act={act}
-                    />
-                    <h3>Tasks</h3>
-                    {detail.tasks?.map((t: Row) => (
-                      <p key={t.id}>
-                        {t.title} ·{" "}
-                        {t.assignee_id === userId ? "You" : t.assignee_id} ·{" "}
-                        {t.status}
-                      </p>
-                    ))}
-                    <h3>Agent work</h3>
-                    {detail.jobs?.map((j: Row) => (
-                      <p key={j.id}>
-                        {j.action} · {j.status}
-                        {j.error && (
-                          <span className="error-text">{j.error}</span>
-                        )}
-                        {j.status === "failed" && (
-                          <button
-                            onClick={() =>
-                              void act(() =>
-                                client.request(
-                                  `${base}/jobs/${j.id}/retry`,
-                                  "POST",
-                                  {},
-                                ),
-                              )
-                            }
-                          >
-                            Retry
-                          </button>
-                        )}
-                      </p>
-                    ))}
-                  </>
-                ) : page === "Memory" ? (
-                  <>
-                    <span className="tag">
-                      {detail.area} · revision {detail.revision}
-                    </span>
-                    <div className="prose">{detail.body}</div>
-                    {detail.data?.kind === "prototype" &&
-                      detail.body.includes("<") && (
-                        <iframe
-                          title="Prototype preview"
-                          sandbox=""
-                          srcDoc={detail.body.replace(
-                            /^```html\s*|\s*```$/g,
-                            "",
-                          )}
-                        />
-                      )}
-                    <p>
-                      {detail.approvals
-                        ?.map((a: Row) => `Approved by ${a.userId} (${a.role})`)
-                        .join(", ")}
-                    </p>
-                    <button
-                      onClick={() =>
-                        void act(async () =>
-                          setVersions(
-                            await client.request(
-                              `${base}/memory/${selected}/history`,
-                            ),
-                          ),
-                        )
-                      }
-                    >
-                      Revision history
-                    </button>
-                    {versions.map((v) => (
-                      <details key={v.revision}>
-                        <summary>
-                          Revision {v.revision} · {v.area}
-                        </summary>
-                        <div className="prose">{v.body}</div>
-                      </details>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <dl>
-                      {Object.entries(detail)
-                        .filter(([, v]) => typeof v !== "object")
-                        .map(([k, v]) => (
-                          <React.Fragment key={k}>
-                            <dt>{k.replaceAll("_", " ")}</dt>
-                            <dd>{String(v)}</dd>
-                          </React.Fragment>
-                        ))}
-                    </dl>
-                  </>
-                )}
-              </article>
-            )}
+            {detailCard}
           </div>
         )}
         {page === "Workflows" && activity.length > 0 && (
           <div className="activity">
-            <span className="eyebrow">RECENT ACTIVITY</span>
+            <span className="eyebrow">Recent activity</span>
             {activity.slice(0, 6).map((e) => (
-              <p key={e.id}>
-                {e.kind.replaceAll(".", " ")}{" "}
+              <div className="activity-row" key={e.id}>
+                <Icon name="zap" size={14} />
+                <span>{sentence(e.kind.replaceAll(".", " "))}</span>
                 <time>{new Date(e.created_at).toLocaleTimeString()}</time>
-              </p>
+              </div>
             ))}
           </div>
         )}
@@ -646,35 +855,41 @@ export function Workbench({
               Set this workflow’s review rules in its detail view after creating
               it.
             </p>
-            <label>
-              Workflow
-              <select value={kind} onChange={(e) => setKind(e.target.value)}>
-                <option value="adr">ADR review</option>
-                <option value="feature">Feature planning</option>
-              </select>
-            </label>
-            <label>
-              Title
-              <input
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
-            <label>
-              Proposal
-              <textarea
-                required
-                rows={8}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-              />
-            </label>
+            <div className="form">
+              <label>
+                Workflow
+                <select value={kind} onChange={(e) => setKind(e.target.value)}>
+                  <option value="adr">ADR review</option>
+                  <option value="feature">Feature planning</option>
+                </select>
+              </label>
+              <label>
+                Title
+                <input
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </label>
+              <label>
+                Proposal
+                <textarea
+                  required
+                  rows={8}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                />
+              </label>
+            </div>
             <div className="actions">
-              <button type="button" onClick={() => setCreating(false)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setCreating(false)}
+              >
                 Cancel
               </button>
-              <button className="primary" disabled={busy}>
+              <button className="btn primary" disabled={busy}>
                 Start workflow
               </button>
             </div>
@@ -684,23 +899,36 @@ export function Workbench({
       {task && (
         <Modal label="Respond to task" onClose={() => setTask(null)}>
           <div className="modal">
+            <span className="eyebrow">{task.kind.replaceAll("_", " ")}</span>
             <h2>{task.title}</h2>
             <p>
               Revision {task.revision}. Your response is recorded as a human
               decision.
             </p>
-            <div className="prose">
-              {detail?.snapshot?.body ?? detail?.input?.body}
-            </div>
-            <textarea
-              aria-label="Task response"
-              rows={7}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Your feedback or answer…"
-            />
+            {detail && detail.id === task.run_id ? (
+              <div className="prose">
+                {detail.snapshot?.body ?? detail.input?.body}
+              </div>
+            ) : (
+              <p className="muted">
+                <span className="spinner" aria-hidden="true" /> Loading the
+                proposal…
+              </p>
+            )}
+            <label>
+              Your response
+              <textarea
+                aria-label="Task response"
+                rows={5}
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Your feedback or answer…"
+              />
+            </label>
             <div className="actions">
-              <button onClick={() => setTask(null)}>Close</button>
+              <button className="btn" onClick={() => setTask(null)}>
+                Close
+              </button>
               {(["approval", "peer_review"].includes(task.kind)
                 ? ["changes_requested", "approved"]
                 : task.kind === "acknowledgment"
@@ -709,7 +937,9 @@ export function Workbench({
               ).map((decision) => (
                 <button
                   key={decision}
-                  className={decision === "approved" ? "primary" : ""}
+                  className={
+                    "btn" + (decision === "changes_requested" ? "" : " primary")
+                  }
                   disabled={
                     busy ||
                     detail?.id !== task.run_id ||
@@ -732,6 +962,9 @@ export function Workbench({
                     })
                   }
                 >
+                  {decision === "approved" && (
+                    <Icon name="check" size={15} strokeWidth={2.25} />
+                  )}
                   {decision === "approved"
                     ? "Approve"
                     : decision === "changes_requested"
@@ -742,146 +975,54 @@ export function Workbench({
                 </button>
               ))}
             </div>
-            <button
-              className="quiet"
-              onClick={() => {
-                setExpanded(true);
-                setPrompt(`Help me with task ${task.id}: ${task.title}`);
-                setTask(null);
-              }}
-            >
-              Work on this with my agent ↗
-            </button>
+            <div className="modal-foot">
+              <button
+                className="btn ghost sm"
+                onClick={() => {
+                  setExpanded(true);
+                  setPrompt(`Help me with task ${task.id}: ${task.title}`);
+                  setTask(null);
+                }}
+              >
+                <Icon name="sparkles" size={15} />
+                Work on this with my agent
+              </button>
+            </div>
           </div>
         </Modal>
       )}
-      <div className={"agent-panel " + (expanded ? "expanded" : "")}>
-        <button
-          className="agent-header"
-          aria-expanded={expanded}
-          aria-label={expanded ? "Minimize agent" : pill}
-          onClick={() => {
-            followChat.current = true;
-            setExpanded(!expanded);
-          }}
-        >
-          <span
-            className={
-              "dot " + (tasks.length ? "amber" : chatBusy ? "working" : "")
-            }
-          />
-          <span className="agent-title">
-            {expanded ? "Your agent" : pill}
-            {expanded && (
-              <small>
-                {chatBusy
-                  ? "Working…"
-                  : !agentReady
-                    ? "Connecting…"
-                    : `Viewing · ${page}`}
-              </small>
-            )}
-          </span>
-          <span className="agent-toggle" aria-hidden="true">
-            {expanded ? "−" : "↗"}
-          </span>
-        </button>
-        {expanded && (
-          <>
-            <div
-              className="chat-messages"
-              ref={chatMessages}
-              onScroll={(e) => {
-                const node = e.currentTarget;
-                followChat.current =
-                  node.scrollHeight - node.scrollTop - node.clientHeight < 60;
-              }}
-              role="log"
-              aria-label="Agent conversation"
-            >
-              {messages.length === 0 && (
-                <p className="muted">
-                  Ask about your workspace, or point me at a decision.
-                </p>
-              )}
-              {messages.map((m, i) => (
-                <div
-                  className={
-                    "message " + (m.role === "you" ? "you" : "assistant")
-                  }
-                  key={i}
-                >
-                  <small>{m.role}</small>
-                  {m.role === "you" ? (
-                    <div>{m.text}</div>
-                  ) : (
-                    <Markdown text={m.text} />
-                  )}
-                </div>
-              ))}
-              {stream && (
-                <div className="message">
-                  <small>agent</small>
-                  <Markdown text={stream} />
-                </div>
-              )}
-            </div>
-            {agentConnectionError && (
-              <p role="alert" className="agent-connection-error">
-                {agentConnectionError}
-              </p>
-            )}
-            <form
-              className="chat-input"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void send();
-              }}
-            >
-              <textarea
-                rows={2}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === "Enter" &&
-                    !e.shiftKey &&
-                    !e.nativeEvent.isComposing
-                  ) {
-                    e.preventDefault();
-                    void send();
-                  }
-                }}
-                aria-label="Message your agent"
-                disabled={!agentReady}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  agentReady ? "Ask about your work…" : "Connecting your agent…"
-                }
-              />
-              <button
-                aria-label="Send message"
-                disabled={!agentReady || !prompt.trim() || chatBusy}
-              >
-                ↑
-              </button>
-            </form>
-            <div className="chat-controls">
-              <button
-                onClick={() =>
-                  void (status === "Paused"
-                    ? window.businessOS?.resume()
-                    : window.businessOS?.stop())
-                }
-              >
-                {status === "Paused" ? "Resume agent" : "Pause agent"}
-              </button>
-              <button onClick={() => setGuiding(!guiding)}>
-                {guiding ? "Pause guidance" : "Allow guidance"}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+      <AgentPanel
+        expanded={expanded}
+        onToggle={() => {
+          followChat.current = true;
+          setExpanded(!expanded);
+        }}
+        pill={pill}
+        page={page}
+        agentReady={agentReady}
+        chatBusy={chatBusy}
+        status={status}
+        tasksPending={tasks.length}
+        messages={messages}
+        stream={stream}
+        prompt={prompt}
+        onPrompt={setPrompt}
+        onSend={() => void send()}
+        guiding={guiding}
+        onGuiding={setGuiding}
+        onPauseResume={() =>
+          void (status === "Paused"
+            ? window.businessOS?.resume()
+            : window.businessOS?.stop())
+        }
+        connectionError={agentConnectionError}
+        logRef={chatMessages}
+        onScroll={(e) => {
+          const node = e.currentTarget;
+          followChat.current =
+            node.scrollHeight - node.scrollTop - node.clientHeight < 60;
+        }}
+      />
+    </div>
   );
 }

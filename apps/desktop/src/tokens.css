@@ -1,0 +1,167 @@
+/* Business OS design tokens, ported from Kiro Crew's light theme with its
+   purple accent. Component styles reference these; they never introduce
+   their own colors, sizes, radii, or timings. */
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/SpaceGrotesk-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("./fonts/SpaceGrotesk-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+:root {
+  color-scheme: light;
+
+  /* Surfaces: the window is white; the side panels sit on it. */
+  --bg: #fff;
+  --bg-accent: #f5f5f5;
+  --bg-elevated: #fff;
+  --bg-hover: #f0f0f0;
+  --card: #fff;
+  --card-fg: #18181b;
+  --card-hl: #00000008;
+  --panel: #fafafa;
+  --panel-strong: #f5f5f5;
+  --chrome: #fafafaf2;
+
+  /* Text */
+  --text: #3f3f46;
+  --text-strong: #18181b;
+  --muted: #71717a;
+  --muted-fg: #fff;
+  --muted-strong: #52525b;
+
+  /* Lines */
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --border-hover: #a1a1aa;
+
+  /* Accent */
+  --accent: #8e48ff;
+  --accent-fg: #fff;
+  --accent-hover: #7a35e0;
+  --accent-subtle: #8e48ff1f;
+  --accent-glow: #8e48ff26;
+  --ring: #8e48ff;
+
+  /* Status */
+  --ok: #16a34a;
+  --ok-fg: #000;
+  --ok-subtle: #16a34a1a;
+  --warn: #a16207;
+  --warn-fg: #fff;
+  --warn-subtle: #a162071a;
+  --danger: #dc2626;
+  --danger-fg: #fff;
+  --danger-subtle: #dc26261a;
+  --info: #0891b2;
+  --info-fg: #000;
+  --aim: #7c3aed;
+  --aim-subtle: #7c3aed1f;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px #0000000f;
+  --shadow-md: 0 4px 12px #00000014, 0 0 0 1px #0000000a;
+  --shadow-lg: 0 12px 28px #0000001f;
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* Typography */
+  --font-body:
+    "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-2xs: 10.5px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-ui: 12.5px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 17px;
+  --text-2xl: 20px;
+  --text-3xl: 24px;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-body: 1.55;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.12em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing on a 4px grid (Tailwind --spacing: .25rem) */
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Controls */
+  --control-h-xs: 24px;
+  --control-h-sm: 28px;
+  --control-h: 32px;
+  --control-h-lg: 36px;
+  --icon-size: 16px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --dur-fast: 100ms;
+  --dur: 150ms;
+  --dur-slow: 250ms;
+
+  /* Layout */
+  --titlebar-h: 40px;
+  --shell-gap: 8px;
+  --shell-pad: 8px;
+  --sidebar-w: 200px;
+  --agent-w: 360px;
+  --content-px: 24px;
+
+  /* Layers */
+  --z-pill: 20;
+  --z-panel: 30;
+  --z-modal: 50;
+}
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-w: 184px;
+    --agent-w: 340px;
+    --content-px: 16px;
+  }
+}

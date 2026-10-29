@@ -214,6 +214,13 @@ if (clerk.isPrimaryInstance) {
         minWidth: 1000,
         minHeight: 700,
         title: "Business OS",
+        backgroundColor: "#ffffff",
+        ...(process.platform === "darwin"
+          ? {
+              titleBarStyle: "hiddenInset" as const,
+              trafficLightPosition: { x: 14, y: 14 },
+            }
+          : {}),
         webPreferences: {
           preload: path.join(import.meta.dirname, "preload.cjs"),
           contextIsolation: true,

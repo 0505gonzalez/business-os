@@ -3,7 +3,13 @@ import { createRoot } from "react-dom/client";
 import { Workbench } from "../../apps/desktop/src/renderer";
 import { ApiClient } from "../../packages/api-client/src";
 const id = "00000000-0000-4000-a000-000000000001";
-const controls = { paymentFailures: 0, noRules: false, slowMemory: false };
+const controls = {
+  paymentFailures: 0,
+  noRules: false,
+  slowMemory: false,
+  extraWorkflows: false,
+  slowChat: false,
+};
 (window as any).fixtureControls = controls;
 const workflow = {
   id,
@@ -19,6 +25,27 @@ const workflow = {
   tasks: [],
   jobs: [],
 };
+const extraWorkflows = [
+  {
+    id: "00000000-0000-4000-a000-000000000002",
+    input: { title: "Self-serve onboarding for small teams" },
+    kind: "feature",
+    stage: "exploration",
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000003",
+    input: { title: "Adopt a single payments provider" },
+    kind: "adr",
+    stage: "completed",
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000004",
+    input: { title: "Quarterly planning ritual" },
+    kind: "adr",
+    stage: "classification",
+    error: "Classification failed: provider timeout",
+  },
+];
 let tasks = [
   {
     id,
@@ -85,7 +112,12 @@ class FixtureClient extends ApiClient {
       tasks = [];
       value = { ok: true };
     } else if (route.endsWith("/workflows"))
-      value = method === "POST" ? workflow : [workflow];
+      value =
+        method === "POST"
+          ? workflow
+          : controls.extraWorkflows
+            ? [workflow, ...extraWorkflows]
+            : [workflow];
     else if (route.includes("/workflows/")) value = workflow;
     else if (route.includes("/memory?")) {
       if (controls.slowMemory)
@@ -133,15 +165,19 @@ class FixtureClient extends ApiClient {
 window.businessOS = {
   context: async () => {},
   onEvent: () => () => {},
-  chat: async () => ({
-    text:
-      "## Workflow summary\n\n**Ready for review**\n\n- Confirm pricing\n- Gather feedback\n\n`workflow-123`\n\n" +
-      "A detailed workflow explanation with review steps and decisions. ".repeat(
-        100,
-      ) +
-      "\n" +
-      "long-record-identifier-".repeat(60),
-  }),
+  chat: async () => {
+    if (controls.slowChat)
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    return {
+      text:
+        "## Workflow summary\n\n**Ready for review**\n\n- Confirm pricing\n- Gather feedback\n\n`workflow-123`\n\n" +
+        "A detailed workflow explanation with review steps and decisions. ".repeat(
+          100,
+        ) +
+        "\n" +
+        "long-record-identifier-".repeat(60),
+    };
+  },
 } as unknown as NonNullable<typeof window.businessOS>;
 createRoot(document.getElementById("test-root")!).render(
   <Workbench
