@@ -8,6 +8,7 @@ const controls = {
   noRules: false,
   slowMemory: false,
   extraWorkflows: false,
+  slowChat: false,
 };
 (window as any).fixtureControls = controls;
 const workflow = {
@@ -164,15 +165,19 @@ class FixtureClient extends ApiClient {
 window.businessOS = {
   context: async () => {},
   onEvent: () => () => {},
-  chat: async () => ({
-    text:
-      "## Workflow summary\n\n**Ready for review**\n\n- Confirm pricing\n- Gather feedback\n\n`workflow-123`\n\n" +
-      "A detailed workflow explanation with review steps and decisions. ".repeat(
-        100,
-      ) +
-      "\n" +
-      "long-record-identifier-".repeat(60),
-  }),
+  chat: async () => {
+    if (controls.slowChat)
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+    return {
+      text:
+        "## Workflow summary\n\n**Ready for review**\n\n- Confirm pricing\n- Gather feedback\n\n`workflow-123`\n\n" +
+        "A detailed workflow explanation with review steps and decisions. ".repeat(
+          100,
+        ) +
+        "\n" +
+        "long-record-identifier-".repeat(60),
+    };
+  },
 } as unknown as NonNullable<typeof window.businessOS>;
 createRoot(document.getElementById("test-root")!).render(
   <Workbench

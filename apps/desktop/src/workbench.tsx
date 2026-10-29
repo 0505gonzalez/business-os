@@ -258,31 +258,36 @@ export function Workbench({
     setPrompt("");
     setMessages((m) => [...m, { role: "you", text }]);
     setStream("");
+    setError("");
     try {
-      await act(async () => {
-        if (!window.businessOS)
-          throw new Error("The agent runs in the desktop application");
-        const response = await window.businessOS.chat(text);
-        setMessages((m) => [...m, { role: "agent", text: response.text }]);
-      });
+      if (!window.businessOS)
+        throw new Error("The agent runs in the desktop application");
+      const response = await window.businessOS.chat(text);
+      setMessages((m) => [...m, { role: "agent", text: response.text }]);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setStream("");
       setChatBusy(false);
     }
   }
+  /* While the agent runs, the pill reports its work ahead of anything else. */
   const pill = !agentReady
     ? "Connecting agent…"
-    : tasks.length
-      ? `Needs you: ${tasks.length}`
-      : status !== "Idle"
-        ? status
-        : chatBusy
-          ? "Working…"
-          : jobs.some((j) => j.status === "failed")
-            ? "Needs attention"
-            : jobs.length
-              ? "Work queued"
-              : "Agent";
+    : status !== "Idle" && status !== "Paused"
+      ? status
+      : chatBusy
+        ? "Working…"
+        : tasks.length
+          ? `Needs you: ${tasks.length}`
+          : status === "Paused"
+            ? "Paused"
+            : jobs.some((j) => j.status === "failed")
+              ? "Needs attention"
+              : jobs.length
+                ? "Work queued"
+                : "Agent";
   const detailTitle = detail
     ? (detail.input?.title ?? detail.title ?? detail.id)
     : "";
@@ -490,6 +495,7 @@ export function Workbench({
             e.preventDefault();
             const text = quick.trim();
             if (!text) return;
+            e.currentTarget.querySelector("input")?.blur();
             setQuick("");
             setExpanded(true);
             followChat.current = true;

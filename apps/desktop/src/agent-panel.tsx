@@ -54,10 +54,10 @@ export function AgentPanel({
     chatBusy || !["Idle", "Paused", "Needs attention"].includes(status);
   const tone = !agentReady
     ? "idle"
-    : tasksPending
-      ? "amber"
-      : working
-        ? "working"
+    : working
+      ? "working"
+      : tasksPending
+        ? "amber"
         : "";
   const substatus = chatBusy
     ? status !== "Idle"
