@@ -23,7 +23,7 @@ export function Settings({
           <dt>Name</dt>
           <dd>{workspaceName ?? "Workspace"}</dd>
           <dt>Your role</dt>
-          <dd>{role}</dd>
+          <dd>{role ? role[0]!.toUpperCase() + role.slice(1) : role}</dd>
         </dl>
       </article>
       <article>

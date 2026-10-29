@@ -32,6 +32,7 @@ function paymentTone(state?: string) {
 function spaced(value: string) {
   return value.replace(/([A-Z])/g, " $1").replaceAll("_", " ");
 }
+const isoDate = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 function sentence(value: string) {
   const text = value.trim();
   return text ? text[0]!.toUpperCase() + text.slice(1).toLowerCase() : text;
@@ -303,7 +304,7 @@ export function Workbench({
         </button>
         {page === "Memory" && (
           <span className="tag">
-            {detail.area} · revision {detail.revision}
+            {sentence(detail.area ?? "")} · Revision {detail.revision}
           </span>
         )}
         {page === "Workflows" && (
@@ -452,7 +453,7 @@ export function Workbench({
           {versions.map((v) => (
             <details key={v.revision}>
               <summary>
-                Revision {v.revision} · {v.area}
+                Revision {v.revision} · {sentence(v.area ?? "")}
               </summary>
               <div className="prose">{v.body}</div>
             </details>
@@ -465,11 +466,13 @@ export function Workbench({
             .map(([k, v]) => (
               <React.Fragment key={k}>
                 <div>
-                  <dt>{k.replaceAll("_", " ")}</dt>
+                  <dt>{sentence(k.replaceAll("_", " "))}</dt>
                   <dd>
                     {k === "amount" && typeof v === "number"
                       ? money(v, String(detail.currency ?? ""))
-                      : String(v)}
+                      : typeof v === "string" && isoDate.test(v)
+                        ? new Date(v).toLocaleString()
+                        : String(v)}
                   </dd>
                 </div>
               </React.Fragment>
