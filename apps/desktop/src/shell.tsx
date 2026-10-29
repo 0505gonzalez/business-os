@@ -23,9 +23,11 @@ export function Sidebar({
     <aside className="sidebar card">
       <div className="brand">
         <span className="brand-mark" aria-hidden="true">
-          <Icon name="logo" size={18} />
+          <Icon name="logo" size={15} strokeWidth={2} />
         </span>
-        <span className="brand-name">Business OS</span>
+        <span className="brand-name">
+          Business <em>OS</em>
+        </span>
       </div>
       <div className="workspace-switcher">
         {workspacePicker ?? (

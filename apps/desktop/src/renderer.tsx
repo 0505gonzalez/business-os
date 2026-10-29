@@ -28,7 +28,7 @@ function Loading({ text }: { text: string }) {
 function BrandMark() {
   return (
     <span className="brand-mark" aria-hidden="true">
-      <Icon name="logo" size={22} />
+      <Icon name="logo" size={18} strokeWidth={2} />
     </span>
   );
 }
