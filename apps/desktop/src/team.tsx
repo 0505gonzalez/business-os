@@ -188,7 +188,7 @@ export function Team({
                 </button>
               </>
             ) : (
-              <span className="tag">{m.role}</span>
+              <span className="tag cap">{m.role}</span>
             )}
           </div>
         ))}
@@ -343,7 +343,7 @@ export function Team({
                     {new Date(i.expires_at).toLocaleDateString()}
                   </small>
                 </div>
-                <span className={"tag " + inviteTone(i.status)}>
+                <span className={"tag cap " + inviteTone(i.status)}>
                   {i.status}
                 </span>
                 {i.status === "pending" && (

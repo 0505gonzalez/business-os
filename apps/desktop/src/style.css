@@ -280,14 +280,13 @@ label > textarea {
   color: var(--muted-strong);
   background: var(--bg-accent);
   white-space: nowrap;
-  text-transform: capitalize;
 }
 .tag.outline {
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--border-strong);
 }
-.tag.plain {
-  text-transform: none;
+.tag.cap {
+  text-transform: capitalize;
 }
 .tag.success {
   background: var(--ok-subtle);
@@ -387,16 +386,61 @@ label > textarea {
 }
 .titlebar {
   grid-column: 1 / -1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 var(--space-1);
   -webkit-app-region: drag;
 }
+.titlebar-command {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(400px, 40vw);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--muted);
+  -webkit-app-region: no-drag;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+.titlebar-command:hover {
+  border-color: var(--border-hover);
+}
+.titlebar-command:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.titlebar-command .icon {
+  color: var(--accent);
+}
+.titlebar-command input {
+  flex: 1;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--text-ui);
+  color: var(--text-strong);
+}
+.titlebar-command input:focus-visible {
+  box-shadow: none;
+  border: 0;
+}
 .titlebar-end {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding-left: calc(var(--control-h-sm) + 160px);
   -webkit-app-region: no-drag;
 }
 .card {
@@ -558,13 +602,13 @@ label > textarea {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  min-height: 48px;
-  padding: var(--space-2) 0;
+  min-height: 44px;
+  padding: var(--space-1) 0;
   margin-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 .page-title {
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
 }
 .page-subtitle {
   margin-top: var(--space-0-5);
@@ -687,7 +731,6 @@ label > textarea {
 .record small {
   color: var(--muted);
   font-size: var(--text-sm);
-  text-transform: capitalize;
 }
 .record-chevron {
   color: var(--muted);
@@ -724,7 +767,7 @@ label > textarea {
   font-size: var(--text-md);
 }
 .empty p {
-  color: var(--muted);
+  color: var(--muted-strong);
   font-size: var(--text-sm);
   max-width: 52ch;
 }
@@ -776,7 +819,6 @@ label > textarea {
 .detail dt {
   color: var(--muted);
   margin-bottom: 1px;
-  text-transform: capitalize;
 }
 .detail dd {
   margin: 0;
@@ -826,7 +868,6 @@ label > textarea {
   font-weight: var(--weight-medium);
   color: var(--muted);
   background: var(--bg-accent);
-  text-transform: capitalize;
 }
 .stages .done {
   color: var(--ok);
@@ -895,7 +936,6 @@ label > textarea {
   font-size: var(--text-ui);
   font-weight: var(--weight-medium);
   color: var(--muted-strong);
-  text-transform: capitalize;
   transition:
     background var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease);
@@ -939,7 +979,6 @@ label > textarea {
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
   color: var(--text);
-  text-transform: capitalize;
 }
 .activity-row .icon {
   color: var(--muted);
@@ -1022,7 +1061,7 @@ summary:hover {
   font-size: var(--text-md);
 }
 .settings article > p {
-  color: var(--muted);
+  color: var(--muted-strong);
   font-size: var(--text-sm);
   margin: var(--space-1) 0 var(--space-3);
 }
@@ -1047,7 +1086,7 @@ summary:hover {
   border-top: 1px solid var(--border);
 }
 .rules > p {
-  color: var(--muted);
+  color: var(--muted-strong);
   font-size: var(--text-sm);
   margin: var(--space-1) 0 var(--space-3);
 }
@@ -1109,7 +1148,7 @@ summary:hover {
   color: var(--muted);
 }
 .team-page article > p {
-  color: var(--muted);
+  color: var(--muted-strong);
   font-size: var(--text-sm);
   margin: var(--space-1) 0 var(--space-3);
 }
@@ -1218,8 +1257,8 @@ summary:hover {
 }
 .agent-panel.collapsed {
   position: fixed;
-  right: var(--space-5);
-  bottom: var(--space-5);
+  top: calc((var(--titlebar-h) - var(--control-h-sm)) / 2);
+  right: calc(var(--shell-pad) + var(--space-1) + 32px + var(--space-2));
   z-index: var(--z-pill);
 }
 .agent-header {
@@ -1231,16 +1270,15 @@ summary:hover {
   flex-shrink: 0;
 }
 .collapsed .agent-header {
-  height: var(--control-h-lg);
-  padding: 0 var(--space-3) 0 var(--space-3);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2) 0 var(--space-2-5);
   border-radius: var(--radius-full);
   background: var(--card);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
   color: var(--text-strong);
   font-size: var(--text-ui);
   font-weight: var(--weight-medium);
-  min-width: 160px;
+  min-width: 0;
   transition:
     background var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease);
@@ -1250,7 +1288,7 @@ summary:hover {
   border-color: var(--border-hover);
 }
 .collapsed .agent-toggle {
-  margin-left: auto;
+  margin-left: var(--space-1);
   color: var(--muted);
   display: inline-flex;
 }
@@ -1393,10 +1431,10 @@ summary:hover {
 }
 .chat-input {
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-  margin: 0 var(--space-3);
-  padding: var(--space-1-5) var(--space-1-5) var(--space-1-5) var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0 var(--space-3) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   background: var(--card);
@@ -1410,9 +1448,9 @@ summary:hover {
   box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .chat-input textarea {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-1-5) 0;
+  width: 100%;
+  min-height: 24px;
+  padding: var(--space-1) 0;
   border: 0;
   background: transparent;
   resize: none;
@@ -1425,7 +1463,18 @@ summary:hover {
   box-shadow: none;
   outline: 0;
 }
-.chat-input button {
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.chat-controls {
+  display: flex;
+  gap: var(--space-0-5);
+  margin-left: calc(var(--space-2) * -1);
+}
+.chat-send {
   display: grid;
   place-items: center;
   flex: 0 0 28px;
@@ -1436,14 +1485,8 @@ summary:hover {
   color: var(--accent-fg);
   transition: background var(--dur-fast) var(--ease);
 }
-.chat-input button:hover:not(:disabled) {
+.chat-send:hover:not(:disabled) {
   background: var(--accent-hover);
-}
-.chat-controls {
-  display: flex;
-  gap: var(--space-0-5);
-  padding: var(--space-1-5) var(--space-3) var(--space-2-5);
-  flex-shrink: 0;
 }
 
 /* ---------- Markdown ---------- */
@@ -1846,7 +1889,6 @@ dialog.overlay::backdrop {
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   color: var(--muted);
-  text-transform: capitalize;
   white-space: nowrap;
 }
 .graph-step.done .graph-label {

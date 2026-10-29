@@ -284,7 +284,7 @@ export type IconName = keyof typeof paths;
 export function Icon({
   name,
   size = 18,
-  strokeWidth = 1.75,
+  strokeWidth = 2,
   className = "",
 }: {
   name: IconName;

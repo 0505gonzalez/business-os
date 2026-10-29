@@ -25,7 +25,11 @@ export const featureStages = [
   "completed",
 ];
 function spaced(value: string) {
-  return value.replace(/([A-Z])/g, " $1").replaceAll("_", " ");
+  const text = value
+    .replace(/([A-Z])/g, " $1")
+    .replaceAll("_", " ")
+    .trim();
+  return text ? text[0]!.toUpperCase() + text.slice(1).toLowerCase() : text;
 }
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n));

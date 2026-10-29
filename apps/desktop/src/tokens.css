@@ -149,7 +149,7 @@
   --titlebar-h: 40px;
   --shell-gap: 8px;
   --shell-pad: 8px;
-  --sidebar-w: 220px;
+  --sidebar-w: 200px;
   --agent-w: 360px;
   --content-px: 24px;
 
@@ -160,7 +160,7 @@
 }
 @media (max-width: 1100px) {
   :root {
-    --sidebar-w: 200px;
+    --sidebar-w: 184px;
     --agent-w: 340px;
     --content-px: 16px;
   }

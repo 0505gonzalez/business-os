@@ -11,13 +11,6 @@ import { Sidebar, Avatar, PageHeader, EmptyState } from "./shell.js";
 import { AgentPanel } from "./agent-panel.js";
 import { WorkflowGraph, adrStages, featureStages } from "./workflow-graph.js";
 type Row = Record<string, any>;
-const subtitles: Record<string, string> = {
-  Workflows: "Move decisions forward, together.",
-  Memory: "Your company’s shared understanding.",
-  Payments: "Payment activity and context.",
-  Team: "People and workspace roles.",
-  Settings: "Workspace configuration.",
-};
 function money(amount: number, currency: string) {
   try {
     return new Intl.NumberFormat(undefined, {
@@ -38,6 +31,10 @@ function paymentTone(state?: string) {
 }
 function spaced(value: string) {
   return value.replace(/([A-Z])/g, " $1").replaceAll("_", " ");
+}
+function sentence(value: string) {
+  const text = value.trim();
+  return text ? text[0]!.toUpperCase() + text.slice(1).toLowerCase() : text;
 }
 export function Workbench({
   client,
@@ -89,6 +86,7 @@ export function Workbench({
     [guiding, setGuiding] = useState(true),
     [guided, setGuided] = useState(false);
   const [view, setView] = useState<"canvas" | "list">("canvas");
+  const [quick, setQuick] = useState("");
   const [paymentRows, setPaymentRows] = useState<Row[]>([]);
   const [paymentState, setPaymentState] = useState<
     "loading" | "ready" | "error"
@@ -251,8 +249,8 @@ export function Workbench({
     setSelected(undefined);
     setDetail(null);
   }
-  async function send() {
-    const text = prompt;
+  async function send(message?: string) {
+    const text = message ?? prompt;
     if (!text.trim() || !agentReady || chatBusy) return;
     followChat.current = true;
     setChatBusy(true);
@@ -283,7 +281,7 @@ export function Workbench({
             ? "Needs attention"
             : jobs.length
               ? "Work queued"
-              : "Ask your agent";
+              : "Agent";
   const detailTitle = detail
     ? (detail.input?.title ?? detail.title ?? detail.id)
     : "";
@@ -341,7 +339,7 @@ export function Workbench({
                 {i < stageIndex && (
                   <Icon name="check" size={12} strokeWidth={2.5} />
                 )}
-                {spaced(stage)}
+                {sentence(spaced(stage))}
               </span>
             ))}
           </div>
@@ -483,6 +481,29 @@ export function Workbench({
   return (
     <div className="shell">
       <div className="titlebar">
+        <form
+          className="titlebar-command"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const text = quick.trim();
+            if (!text) return;
+            setQuick("");
+            setExpanded(true);
+            followChat.current = true;
+            void send(text);
+          }}
+        >
+          <Icon name="sparkles" size={14} />
+          <input
+            aria-label="Ask your agent"
+            placeholder={
+              agentReady ? "Ask your agent…" : "Connecting your agent…"
+            }
+            disabled={!agentReady}
+            value={quick}
+            onChange={(e) => setQuick(e.target.value)}
+          />
+        </form>
         <div className="titlebar-end">{account ?? <Avatar />}</div>
       </div>
       <Sidebar
@@ -493,7 +514,7 @@ export function Workbench({
         workspacePicker={workspacePicker}
       />
       <section className={"content" + (guided ? " guided" : "")}>
-        <PageHeader title={page} subtitle={subtitles[page]}>
+        <PageHeader title={page}>
           {page === "Workflows" && (
             <>
               <div className="segmented view-toggle" aria-label="View">
@@ -567,7 +588,9 @@ export function Workbench({
                 }}
               >
                 <strong>{t.title}</strong>
-                <span className="tag">{t.kind.replaceAll("_", " ")}</span>
+                <span className="tag">
+                  {sentence(t.kind.replaceAll("_", " "))}
+                </span>
                 <Icon name="chevron-right" size={16} />
               </button>
             ))}
@@ -585,7 +608,7 @@ export function Workbench({
                     setSelected(undefined);
                   }}
                 >
-                  {a}
+                  {sentence(a)}
                 </button>
               ))}
             </div>
@@ -733,7 +756,7 @@ export function Workbench({
                               ? "ADR review"
                               : "Feature planning"
                             : page === "Memory"
-                              ? `${row.area} · Revision ${row.revision}`
+                              ? `${sentence(row.area ?? "")} · Revision ${row.revision}`
                               : `${row.data?.currency ?? "Payment"} · ${money(
                                   row.data?.amount ?? 0,
                                   row.data?.currency,
@@ -750,11 +773,11 @@ export function Workbench({
                             (row.stage === "completed" ? "success" : "outline")
                           }
                         >
-                          {spaced(row.stage ?? "")}
+                          {sentence(spaced(row.stage ?? ""))}
                         </span>
                       ) : page === "Payments" ? (
                         <span className={"tag " + paymentTone(state)}>
-                          {(state ?? "unknown").toLowerCase()}
+                          {sentence(state ?? "unknown")}
                         </span>
                       ) : (
                         <Icon
@@ -777,7 +800,7 @@ export function Workbench({
             {activity.slice(0, 6).map((e) => (
               <div className="activity-row" key={e.id}>
                 <Icon name="zap" size={14} />
-                <span>{e.kind.replaceAll(".", " ")}</span>
+                <span>{sentence(e.kind.replaceAll(".", " "))}</span>
                 <time>{new Date(e.created_at).toLocaleTimeString()}</time>
               </div>
             ))}

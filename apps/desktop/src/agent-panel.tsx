@@ -185,26 +185,33 @@ export function AgentPanel({
                 agentReady ? "Ask about your work…" : "Connecting your agent…"
               }
             />
-            <button
-              aria-label="Send message"
-              disabled={!agentReady || !prompt.trim() || chatBusy}
-            >
-              <Icon name="arrow-up" size={16} strokeWidth={2.25} />
-            </button>
+            <div className="chat-toolbar">
+              <div className="chat-controls">
+                <button type="button" className="chip" onClick={onPauseResume}>
+                  <Icon name={paused ? "play" : "pause"} size={13} />
+                  {paused ? "Resume agent" : "Pause agent"}
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => onGuiding(!guiding)}
+                >
+                  <Icon
+                    name={guiding ? "navigation" : "navigation-off"}
+                    size={13}
+                  />
+                  {guiding ? "Pause guidance" : "Allow guidance"}
+                </button>
+              </div>
+              <button
+                className="chat-send"
+                aria-label="Send message"
+                disabled={!agentReady || !prompt.trim() || chatBusy}
+              >
+                <Icon name="arrow-up" size={16} strokeWidth={2.25} />
+              </button>
+            </div>
           </form>
-          <div className="chat-controls">
-            <button className="chip" onClick={onPauseResume}>
-              <Icon name={paused ? "play" : "pause"} size={13} />
-              {paused ? "Resume agent" : "Pause agent"}
-            </button>
-            <button className="chip" onClick={() => onGuiding(!guiding)}>
-              <Icon
-                name={guiding ? "navigation" : "navigation-off"}
-                size={13}
-              />
-              {guiding ? "Pause guidance" : "Allow guidance"}
-            </button>
-          </div>
         </>
       )}
     </aside>
