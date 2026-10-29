@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./icons.js";
+import { modKey } from "./shell.js";
 type Row = Record<string, any>;
 type Transform = { x: number; y: number; k: number };
 const PAD = 32;
@@ -266,7 +267,7 @@ export function WorkflowGraph({
         </button>
       </div>
       <div className="graph-hint" aria-hidden="true">
-        Drag to pan · ⌘ scroll to zoom
+        Drag to pan · {modKey} scroll to zoom
       </div>
     </div>
   );

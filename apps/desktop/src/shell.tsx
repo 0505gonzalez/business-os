@@ -1,5 +1,10 @@
 import React from "react";
 import { Icon, type IconName } from "./icons.js";
+/* The platform's command modifier, for keyboard hints. */
+export const modKey =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
+    ? "⌘"
+    : "Ctrl";
 export const pages: { name: string; icon: IconName }[] = [
   { name: "Workflows", icon: "workflow" },
   { name: "Payments", icon: "card" },

@@ -7,7 +7,7 @@ import { commandSchema } from "../../../packages/contracts/src/index.js";
 import { Settings } from "./settings.js";
 import { PlanningMapView } from "./planning-map.js";
 import { Icon } from "./icons.js";
-import { Sidebar, Avatar, PageHeader, EmptyState } from "./shell.js";
+import { Sidebar, Avatar, PageHeader, EmptyState, modKey } from "./shell.js";
 import { AgentPanel } from "./agent-panel.js";
 import { WorkflowGraph, adrStages, featureStages } from "./workflow-graph.js";
 type Row = Record<string, any>;
@@ -525,7 +525,7 @@ export function Workbench({
             value={quick}
             onChange={(e) => setQuick(e.target.value)}
           />
-          <kbd aria-hidden="true">⌘K</kbd>
+          <kbd aria-hidden="true">{modKey}K</kbd>
         </form>
         <div className="titlebar-end">{account ?? <Avatar />}</div>
       </div>
