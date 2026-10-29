@@ -26,8 +26,8 @@
 :root {
   color-scheme: light;
 
-  /* Surfaces */
-  --bg: #fafafa;
+  /* Surfaces: the window is white; the side panels sit on it. */
+  --bg: #fff;
   --bg-accent: #f5f5f5;
   --bg-elevated: #fff;
   --bg-hover: #f0f0f0;

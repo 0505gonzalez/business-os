@@ -546,14 +546,12 @@ label > textarea {
   min-height: 0;
   overflow: auto;
   padding: 0 var(--content-px) var(--space-16);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
 }
 .content.guided {
   box-shadow: inset 0 0 0 2px var(--accent-glow);
+  border-radius: var(--radius-lg);
 }
 .page-header {
   display: flex;

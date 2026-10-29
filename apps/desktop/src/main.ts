@@ -214,7 +214,7 @@ if (clerk.isPrimaryInstance) {
         minWidth: 1000,
         minHeight: 700,
         title: "Business OS",
-        backgroundColor: "#fafafa",
+        backgroundColor: "#ffffff",
         ...(process.platform === "darwin"
           ? {
               titleBarStyle: "hiddenInset" as const,
