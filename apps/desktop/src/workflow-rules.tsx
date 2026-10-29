@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ApiClient } from "../../../packages/api-client/src/index.js";
+import { Icon } from "./icons.js";
 type Row = Record<string, any>;
 export function WorkflowRules({
   client,
@@ -24,57 +25,72 @@ export function WorkflowRules({
     void act(load);
   }, [base]);
   return (
-    <div className="settings workflow-rules">
-      <article>
-        <h3>Review rules</h3>
-        <p>
-          Choose who approves, acknowledges, or is informed in this workflow.
-          Assign team roles in Team. Changes apply to future tasks; existing
-          assignments keep their original rules.
+    <section className="rules">
+      <h3>
+        <Icon name="shield" size={16} />
+        Review rules
+      </h3>
+      <p>
+        Choose who approves, acknowledges, or is informed in this workflow.
+        Assign team roles in Team. Changes apply to future tasks; existing
+        assignments keep their original rules.
+      </p>
+      {!rules.length && (
+        <p className="muted">
+          Add rules for this workflow. They do not apply to other workflows.
         </p>
-        {!rules.length && (
-          <p className="muted">
-            Add rules for this workflow. They do not apply to other workflows.
-          </p>
-        )}
-        {rules.map((r) => (
-          <button
-            className="rule"
-            key={r.domain}
-            onClick={() => {
-              setDomain(r.domain);
-              setApprover(r.approver_role);
-              setInformed(r.informed_roles.join(", "));
-              setAck(r.acknowledgment_roles.join(", "));
-            }}
-          >
-            {r.domain} → {r.approver_role} approval <small>v{r.version}</small>
-          </button>
-        ))}
-        {editable && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void act(async () => {
-                await client.request(
-                  `${base}/rules/${encodeURIComponent(domain)}`,
-                  "PUT",
-                  {
-                    approverRole: approver,
-                    informedRoles: informed
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                    acknowledgmentRoles: ack
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  },
-                );
-                await load();
-              });
-            }}
-          >
+      )}
+      {rules.length > 0 && (
+        <div className="row-list">
+          {rules.map((r) => (
+            <button
+              className="rule"
+              key={r.domain}
+              onClick={() => {
+                setDomain(r.domain);
+                setApprover(r.approver_role);
+                setInformed(r.informed_roles.join(", "));
+                setAck(r.acknowledgment_roles.join(", "));
+              }}
+            >
+              <span>
+                {r.domain}
+                <span className="arrow" aria-hidden="true">
+                  →
+                </span>
+                {r.approver_role} approval
+              </span>
+              <span className="tag outline plain">v{r.version}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {editable && (
+        <form
+          className="form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(async () => {
+              await client.request(
+                `${base}/rules/${encodeURIComponent(domain)}`,
+                "PUT",
+                {
+                  approverRole: approver,
+                  informedRoles: informed
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                  acknowledgmentRoles: ack
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                },
+              );
+              await load();
+            });
+          }}
+        >
+          <div className="form-row">
             <label>
               Domain
               <input
@@ -93,6 +109,8 @@ export function WorkflowRules({
                 onChange={(e) => setApprover(e.target.value)}
               />
             </label>
+          </div>
+          <div className="form-row">
             <label>
               Informed roles (comma separated)
               <input
@@ -104,10 +122,10 @@ export function WorkflowRules({
               Acknowledgment roles
               <input value={ack} onChange={(e) => setAck(e.target.value)} />
             </label>
-            <button className="primary">Save rule</button>
-          </form>
-        )}
-      </article>
-    </div>
+          </div>
+          <button className="btn primary">Save rule</button>
+        </form>
+      )}
+    </section>
   );
 }

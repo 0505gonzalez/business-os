@@ -10,10 +10,28 @@ import {
   UserButton,
 } from "@clerk/electron/react";
 import { ApiClient } from "../../../packages/api-client/src/index.js";
-import { commandSchema } from "../../../packages/contracts/src/index.js";
+import { Icon } from "./icons.js";
+import { WorkspaceSwitcher } from "./shell.js";
 import "./style.css";
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 type Row = Record<string, any>;
+function Loading({ text }: { text: string }) {
+  return (
+    <div className="center">
+      <div className="loading" role="status">
+        <span className="spinner" aria-hidden="true" />
+        {text}
+      </div>
+    </div>
+  );
+}
+function BrandMark() {
+  return (
+    <span className="brand-mark" aria-hidden="true">
+      <Icon name="logo" size={22} />
+    </span>
+  );
+}
 function Authenticated() {
   const auth = useAuth();
   const { user } = useUser();
@@ -38,12 +56,12 @@ function Authenticated() {
         })
         .catch(() => {});
   }, [user?.id, user?.fullName, client]);
-  if (!auth.isLoaded)
-    return <div className="center">Loading your workspace…</div>;
+  if (!auth.isLoaded) return <Loading text="Loading your workspace…" />;
   if (!auth.isSignedIn)
     return (
       <div className="center">
-        <div>
+        <div className="onboard">
+          <BrandMark />
           <h1>Business OS</h1>
           <p>A shared place to move work forward.</p>
           <SignIn routing="hash" />
@@ -136,59 +154,79 @@ function Workspace({
       setError((e as Error).message);
     }
   }
-  if (loading) return <div className="center">Loading workspaces…</div>;
+  if (loading) return <Loading text="Loading workspaces…" />;
   if (!workspace || showJoin)
     return (
       <div className="center">
         <div className="onboard">
+          <BrandMark />
           <h1>Your company’s workspace</h1>
-          {workspace && (
-            <button onClick={() => setShowJoin(false)}>
-              Back to workspace
-            </button>
-          )}
           <p>Create a workspace or join your team.</p>
           {error && <div role="alert">{error}</div>}
-          <label>
-            Company name
-            <input value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <button
-            className="primary"
-            disabled={!name.trim()}
-            onClick={() =>
-              void action(async () => {
-                const w = await client.request("/workspaces", "POST", { name });
-                setWorkspace(w.id);
-                setShowJoin(false);
-              })
-            }
-          >
-            Create workspace
-          </button>
+          <div className="form">
+            <label>
+              Company name
+              <input value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <button
+              className="btn primary"
+              disabled={!name.trim()}
+              onClick={() =>
+                void action(async () => {
+                  const w = await client.request("/workspaces", "POST", {
+                    name,
+                  });
+                  setWorkspace(w.id);
+                  setShowJoin(false);
+                })
+              }
+            >
+              Create workspace
+            </button>
+          </div>
           <hr />
-          <label>
-            Invitation code
-            <input value={invite} onChange={(e) => setInvite(e.target.value)} />
-          </label>
-          <button
-            disabled={!invite.trim()}
-            onClick={() =>
-              void action(async () => {
-                const result = await client.request(
-                  "/invitations/accept",
-                  "POST",
-                  { token: invite.trim() },
-                );
-                setWorkspace(result.workspaceId);
-                setInvite("");
-                setShowJoin(false);
-              })
-            }
-          >
-            Join workspace
-          </button>
-          <UserButton />
+          <div className="form">
+            <label>
+              Invitation code
+              <input
+                value={invite}
+                onChange={(e) => setInvite(e.target.value)}
+              />
+            </label>
+            <button
+              className="btn"
+              disabled={!invite.trim()}
+              onClick={() =>
+                void action(async () => {
+                  const result = await client.request(
+                    "/invitations/accept",
+                    "POST",
+                    { token: invite.trim() },
+                  );
+                  setWorkspace(result.workspaceId);
+                  setInvite("");
+                  setShowJoin(false);
+                })
+              }
+            >
+              <Icon name="log-in" size={15} />
+              Join workspace
+            </button>
+          </div>
+          <div className="onboard-foot">
+            {workspace ? (
+              <button
+                className="btn ghost sm"
+                onClick={() => setShowJoin(false)}
+              >
+                <Icon name="arrow-left" size={15} />
+                Back to workspace
+              </button>
+            ) : (
+              <span />
+            )}
+            <UserButton />
+          </div>
         </div>
       </div>
     );
@@ -196,7 +234,8 @@ function Workspace({
     return (
       <div className="center">
         <div className="onboard">
-          <span className="eyebrow">YOUR AI SUBSCRIPTION</span>
+          <BrandMark />
+          <span className="eyebrow">Your AI subscription</span>
           <h1>Connect your agent</h1>
           <p>
             Use your Claude subscription on this computer. Your company’s memory
@@ -218,16 +257,25 @@ function Workspace({
             }
           >
             <strong>Claude</strong>
-            <span>Connect your subscription ↗</span>
+            <span>
+              Connect your subscription
+              <Icon name="arrow-up-right" size={14} />
+            </span>
           </button>
           <button className="provider" disabled>
             <strong>Codex</strong>
             <span>Coming next</span>
           </button>
-          <button className="quiet" onClick={() => setSkipConnection(true)}>
-            Browse workspace first
-          </button>
-          <UserButton />
+          <div className="onboard-foot">
+            <button
+              className="btn ghost sm"
+              onClick={() => setSkipConnection(true)}
+            >
+              Browse workspace first
+              <Icon name="chevron-right" size={15} />
+            </button>
+            <UserButton />
+          </div>
         </div>
       </div>
     );
@@ -244,22 +292,12 @@ function Workspace({
       }
       role={workspaces.find((w) => w.id === workspace)?.role}
       workspacePicker={
-        <>
-          <select
-            aria-label="Workspace"
-            value={workspace}
-            onChange={(e) => setWorkspace(e.target.value)}
-          >
-            {workspaces.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name}
-              </option>
-            ))}
-          </select>
-          <button className="quiet" onClick={() => setShowJoin(true)}>
-            Join workspace
-          </button>
-        </>
+        <WorkspaceSwitcher
+          workspaces={workspaces.map((w) => ({ id: w.id, name: w.name }))}
+          value={workspace}
+          onChange={setWorkspace}
+          onJoin={() => setShowJoin(true)}
+        />
       }
       account={<UserButton />}
     />
@@ -276,6 +314,7 @@ if (root)
     ) : (
       <div className="center">
         <div className="onboard">
+          <BrandMark />
           <h1>Business OS</h1>
           <p>
             This installation needs its Clerk publishable key. Configure the

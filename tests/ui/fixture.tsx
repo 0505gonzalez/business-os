@@ -3,7 +3,12 @@ import { createRoot } from "react-dom/client";
 import { Workbench } from "../../apps/desktop/src/renderer";
 import { ApiClient } from "../../packages/api-client/src";
 const id = "00000000-0000-4000-a000-000000000001";
-const controls = { paymentFailures: 0, noRules: false, slowMemory: false };
+const controls = {
+  paymentFailures: 0,
+  noRules: false,
+  slowMemory: false,
+  extraWorkflows: false,
+};
 (window as any).fixtureControls = controls;
 const workflow = {
   id,
@@ -19,6 +24,27 @@ const workflow = {
   tasks: [],
   jobs: [],
 };
+const extraWorkflows = [
+  {
+    id: "00000000-0000-4000-a000-000000000002",
+    input: { title: "Self-serve onboarding for small teams" },
+    kind: "feature",
+    stage: "exploration",
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000003",
+    input: { title: "Adopt a single payments provider" },
+    kind: "adr",
+    stage: "completed",
+  },
+  {
+    id: "00000000-0000-4000-a000-000000000004",
+    input: { title: "Quarterly planning ritual" },
+    kind: "adr",
+    stage: "classification",
+    error: "Classification failed: provider timeout",
+  },
+];
 let tasks = [
   {
     id,
@@ -85,7 +111,12 @@ class FixtureClient extends ApiClient {
       tasks = [];
       value = { ok: true };
     } else if (route.endsWith("/workflows"))
-      value = method === "POST" ? workflow : [workflow];
+      value =
+        method === "POST"
+          ? workflow
+          : controls.extraWorkflows
+            ? [workflow, ...extraWorkflows]
+            : [workflow];
     else if (route.includes("/workflows/")) value = workflow;
     else if (route.includes("/memory?")) {
       if (controls.slowMemory)

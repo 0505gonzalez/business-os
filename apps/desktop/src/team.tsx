@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ApiClient } from "../../../packages/api-client/src/index.js";
+import { Icon } from "./icons.js";
+import { Avatar, EmptyState } from "./shell.js";
 type Member = {
   user_id: string;
   display_name: string;
@@ -13,6 +15,14 @@ type Invitation = {
   status: string;
   expires_at: string;
 };
+const roles = ["owner", "ceo", "engineer", "product", "finance", "member"];
+function inviteTone(status: string) {
+  return status === "accepted"
+    ? "success"
+    : status === "pending"
+      ? "warning"
+      : "";
+}
 export function Team({
   client,
   base,
@@ -77,19 +87,25 @@ export function Team({
   }, [base, role]);
   if (loading)
     return (
-      <article role="status">
-        <h3>Loading team…</h3>
-        <p>Getting members and invitations.</p>
-      </article>
+      <div className="team-page">
+        <EmptyState icon="users" title="Loading team…" role="status">
+          <p>Getting members and invitations.</p>
+        </EmptyState>
+      </div>
     );
   if (!loaded)
     return (
-      <article role="alert">
-        <h3>Couldn’t load your team</h3>
-        <p>{error}</p>
-        <button onClick={() => void refresh()}>Try again</button>
-      </article>
+      <div className="team-page">
+        <EmptyState icon="alert" title="Couldn’t load your team" role="alert">
+          <p>{error}</p>
+          <button className="btn" onClick={() => void refresh()}>
+            <Icon name="refresh" size={15} />
+            Try again
+          </button>
+        </EmptyState>
+      </div>
     );
+  const owners = members.filter((person) => person.role === "owner").length;
   return (
     <div className="team-page">
       {error && (
@@ -97,12 +113,17 @@ export function Team({
           {error}
         </div>
       )}
-      <article>
+      <article className="card">
         <div className="team-heading">
           <h2>
             Members <small>{members.length}</small>
           </h2>
-          <button disabled={busy} onClick={() => void refresh()}>
+          <button
+            className="btn ghost sm"
+            disabled={busy}
+            onClick={() => void refresh()}
+          >
+            <Icon name="refresh" size={15} />
             Refresh team
           </button>
         </div>
@@ -111,17 +132,16 @@ export function Team({
           workflow reviews.
         </p>
         <datalist id="team-roles">
-          {["owner", "ceo", "engineer", "product", "finance", "member"].map(
-            (r) => (
-              <option key={r} value={r} />
-            ),
-          )}
+          {roles.map((r) => (
+            <option key={r} value={r} />
+          ))}
         </datalist>
         {members.map((m) => (
           <div className="team-member" key={m.user_id}>
+            <Avatar name={m.display_name} />
             <div>
               <strong>{m.display_name}</strong>
-              {m.user_id === userId && <span className="tag">You</span>}
+              {m.user_id === userId && <span className="tag accent">You</span>}
               <small>Joined {new Date(m.joined_at).toLocaleDateString()}</small>
             </div>
             {role === "owner" ? (
@@ -135,6 +155,7 @@ export function Team({
                   }
                 />
                 <button
+                  className="btn"
                   disabled={
                     busy ||
                     !edits[m.user_id]?.trim() ||
@@ -154,16 +175,10 @@ export function Team({
                   Save role
                 </button>
                 <button
-                  disabled={
-                    busy ||
-                    (m.role === "owner" &&
-                      members.filter((person) => person.role === "owner")
-                        .length === 1)
-                  }
+                  className="btn ghost danger"
+                  disabled={busy || (m.role === "owner" && owners === 1)}
                   title={
-                    m.role === "owner" &&
-                    members.filter((person) => person.role === "owner")
-                      .length === 1
+                    m.role === "owner" && owners === 1
                       ? "Add another owner before removing this person"
                       : "Remove this person from the workspace"
                   }
@@ -188,29 +203,36 @@ export function Team({
               They will lose access to this workspace. Their existing invitation
               cannot be reused. Completed work stays in the workspace.
             </p>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void act(async () => {
-                  await client.request(
-                    `${base}/members/${encodeURIComponent(removing.user_id)}`,
-                    "DELETE",
-                  );
-                  setRemoving(null);
-                })
-              }
-            >
-              Confirm removal
-            </button>
-            <button disabled={busy} onClick={() => setRemoving(null)}>
-              Cancel
-            </button>
+            <div className="actions">
+              <button
+                className="btn primary"
+                disabled={busy}
+                onClick={() =>
+                  void act(async () => {
+                    await client.request(
+                      `${base}/members/${encodeURIComponent(removing.user_id)}`,
+                      "DELETE",
+                    );
+                    setRemoving(null);
+                  })
+                }
+              >
+                Confirm removal
+              </button>
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={() => setRemoving(null)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </article>
       {role === "owner" && (
         <>
-          <article>
+          <article className="card">
             <h2>Invite a teammate</h2>
             <p>
               Create a single-use code and share it privately. Anyone with the
@@ -264,34 +286,42 @@ export function Team({
                   </select>
                 </label>
               </div>
-              <button className="primary" disabled={busy || !inviteRole.trim()}>
+              <button
+                className="btn primary"
+                disabled={busy || !inviteRole.trim()}
+              >
+                <Icon name="user-plus" size={15} />
                 Create invitation
               </button>
             </form>
             {code && (
               <div className="team-code">
-                <label>
-                  Invitation code
-                  <input
-                    readOnly
-                    value={code}
-                    onFocus={(e) => e.target.select()}
-                  />
-                </label>
-                <button
-                  onClick={() => {
-                    void navigator.clipboard
-                      .writeText(code)
-                      .then(() => setCopied(true))
-                      .catch(() =>
-                        setError(
-                          "Select and copy the invitation code manually.",
-                        ),
-                      );
-                  }}
-                >
-                  {copied ? "Copied" : "Copy code"}
-                </button>
+                <div className="code-row">
+                  <label>
+                    Invitation code
+                    <input
+                      readOnly
+                      value={code}
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </label>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(code)
+                        .then(() => setCopied(true))
+                        .catch(() =>
+                          setError(
+                            "Select and copy the invitation code manually.",
+                          ),
+                        );
+                    }}
+                  >
+                    <Icon name={copied ? "check" : "copy"} size={15} />
+                    {copied ? "Copied" : "Copy code"}
+                  </button>
+                </div>
                 <p>
                   Ask your teammate to open Business OS, sign in with Google,
                   choose “Join workspace,” and paste this code. The code is
@@ -300,11 +330,12 @@ export function Team({
               </div>
             )}
           </article>
-          <article>
+          <article className="card">
             <h2>Invitations</h2>
             {!invites.length && <p>No invitations yet.</p>}
             {invites.map((i) => (
               <div className="team-member" key={i.id}>
+                <Avatar name={i.label} />
                 <div>
                   <strong>{i.label || "Workspace invitation"}</strong>
                   <small>
@@ -312,9 +343,12 @@ export function Team({
                     {new Date(i.expires_at).toLocaleDateString()}
                   </small>
                 </div>
-                <span className="tag">{i.status}</span>
+                <span className={"tag " + inviteTone(i.status)}>
+                  {i.status}
+                </span>
                 {i.status === "pending" && (
                   <button
+                    className="btn ghost danger"
                     disabled={busy}
                     onClick={() =>
                       void act(async () => {
@@ -326,6 +360,7 @@ export function Team({
                       })
                     }
                   >
+                    <Icon name="ban" size={14} />
                     Revoke
                   </button>
                 )}

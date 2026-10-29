@@ -1,18 +1,23 @@
 import React from "react";
+import { Icon } from "./icons.js";
 type Row = Record<string, any>;
+const sections = [
+  "destination",
+  "acceptanceCriteria",
+  "notes",
+  "decisions",
+  "suspectedDecisions",
+  "ruledOut",
+];
 export function PlanningMapView({ map }: { map: Row }) {
   return (
-    <div>
-      <h3>Exploration map</h3>
-      {[
-        "destination",
-        "acceptanceCriteria",
-        "notes",
-        "decisions",
-        "suspectedDecisions",
-        "ruledOut",
-      ].map((key) => (
-        <div key={key}>
+    <div className="planning-map">
+      <h3>
+        <Icon name="compass" size={16} />
+        Exploration map
+      </h3>
+      {sections.map((key) => (
+        <div className="map-section" key={key}>
           <h4>{key.replace(/([A-Z])/g, " $1")}</h4>
           <div className="prose">
             {Array.isArray(map[key]) ? map[key].join("\n") : map[key]}
@@ -24,7 +29,9 @@ export function PlanningMapView({ map }: { map: Row }) {
           <summary>
             {q.kind} · {q.title}
           </summary>
-          <p>Depends on: {q.blockedBy.join(", ") || "Nothing"}</p>
+          <p className="muted">
+            Depends on: {q.blockedBy.join(", ") || "Nothing"}
+          </p>
           <div className="prose">{q.result ?? "Awaiting work"}</div>
         </details>
       ))}

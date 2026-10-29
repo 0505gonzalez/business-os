@@ -1,0 +1,153 @@
+/* Business OS design tokens. Component styles reference these; they never
+   introduce their own colors, sizes, radii, or timings. */
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable.woff2") format("woff2");
+}
+:root {
+  color-scheme: light;
+
+  /* Primitive palette */
+  --white: #ffffff;
+  --gray-50: #f8f9fb;
+  --gray-100: #eef0f4;
+  --gray-150: #e6e9ef;
+  --gray-200: #dde0e7;
+  --gray-300: #c9cdd6;
+  --gray-400: #9ea4b0;
+  --gray-500: #717884;
+  --gray-600: #525865;
+  --gray-700: #363b46;
+  --gray-800: #23262e;
+  --gray-900: #141619;
+  --indigo-600: #4650d6;
+  --indigo-500: #5b67f1;
+  --indigo-100: #e9ebfe;
+  --green-700: #22714a;
+  --green-100: #e2f3e9;
+  --amber-700: #8f5e12;
+  --amber-500: #d9a23b;
+  --amber-100: #fbf0d7;
+  --red-700: #a9372f;
+  --red-100: #fde8e6;
+  --orb-a: #7c8cff;
+  --orb-b: #c6a4ff;
+  --orb-c: #8fdcff;
+
+  /* Semantic color */
+  --bg-canvas: var(--gray-100);
+  --bg-surface: var(--white);
+  --bg-surface-2: var(--gray-50);
+  --bg-sunken: var(--gray-150);
+  --bg-hover: color-mix(in srgb, var(--gray-900) 4%, transparent);
+  --bg-active: color-mix(in srgb, var(--gray-900) 7%, transparent);
+  --bg-inverse: var(--gray-900);
+  --bg-inverse-hover: var(--gray-800);
+  --fg: var(--gray-900);
+  --fg-2: var(--gray-600);
+  --fg-3: var(--gray-500);
+  --fg-4: var(--gray-400);
+  --fg-inverse: var(--white);
+  --border: color-mix(in srgb, var(--gray-900) 8%, transparent);
+  --border-strong: color-mix(in srgb, var(--gray-900) 14%, transparent);
+  --accent: var(--indigo-500);
+  --accent-fg: var(--indigo-600);
+  --accent-soft: var(--indigo-100);
+  --success-fg: var(--green-700);
+  --success-soft: var(--green-100);
+  --warning: var(--amber-500);
+  --warning-fg: var(--amber-700);
+  --warning-soft: var(--amber-100);
+  --danger-fg: var(--red-700);
+  --danger-soft: var(--red-100);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+
+  /* Typography */
+  --font-sans:
+    "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 38px;
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-wide: 0.08em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Spacing on a 4px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-full: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(20 22 25 / 0.04), 0 0 0 1px rgb(20 22 25 / 0.04);
+  --shadow-raised:
+    0 4px 12px -2px rgb(20 22 25 / 0.08), 0 0 0 1px rgb(20 22 25 / 0.05);
+  --shadow-float:
+    0 16px 40px -12px rgb(20 22 25 / 0.22), 0 0 0 1px rgb(20 22 25 / 0.06);
+  --shadow-modal:
+    0 32px 80px -16px rgb(20 22 25 / 0.3), 0 0 0 1px rgb(20 22 25 / 0.06);
+
+  /* Controls */
+  --control-h-sm: 30px;
+  --control-h: 36px;
+  --control-h-lg: 44px;
+  --control-px: 14px;
+  --icon-size: 18px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+
+  /* Layout */
+  --titlebar-h: 44px;
+  --shell-gap: 12px;
+  --shell-pad: 12px;
+  --sidebar-w: 236px;
+  --agent-w: 384px;
+  --content-max: 1120px;
+
+  /* Layers */
+  --z-pill: 20;
+  --z-panel: 30;
+  --z-modal: 50;
+}
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-w: 212px;
+    --agent-w: 360px;
+  }
+}
