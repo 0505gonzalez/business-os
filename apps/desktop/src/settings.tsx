@@ -16,7 +16,7 @@ export function Settings({
 }) {
   return (
     <div className="settings">
-      <article className="card">
+      <article>
         <h3>Workspace</h3>
         <p>Your shared company workspace and your role in it.</p>
         <dl>
@@ -26,7 +26,7 @@ export function Settings({
           <dd>{role}</dd>
         </dl>
       </article>
-      <article className="card">
+      <article>
         <h3>Brain index</h3>
         <p>Rebuild the searchable index from authoritative bucket revisions.</p>
         {role === "owner" ? (

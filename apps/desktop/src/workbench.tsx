@@ -297,7 +297,7 @@ export function Workbench({
       });
   }, [detail?.id, page, view]);
   const detailCard = detail && (
-    <article className="card detail" ref={detailRef}>
+    <article className="detail" ref={detailRef}>
       <div className="detail-top">
         <button className="btn ghost sm" onClick={close}>
           <Icon name="arrow-left" size={16} />
@@ -709,47 +709,59 @@ export function Workbench({
                       key={id}
                       onClick={() => open(id)}
                     >
-                      <div className="record-head">
-                        <span className="eyebrow">
+                      <span className="record-icon" aria-hidden="true">
+                        <Icon
+                          name={
+                            page === "Workflows"
+                              ? row.kind === "adr"
+                                ? "file"
+                                : "compass"
+                              : page === "Payments"
+                                ? "card"
+                                : "book"
+                          }
+                          size={16}
+                        />
+                      </span>
+                      <span className="record-body">
+                        <strong>
+                          {row.input?.title ?? row.title ?? row.external_id}
+                        </strong>
+                        <small>
                           {page === "Workflows"
                             ? row.kind === "adr"
                               ? "ADR review"
                               : "Feature planning"
                             : page === "Memory"
-                              ? row.area
-                              : (row.data?.currency ?? "Payment")}
+                              ? `${row.area} · Revision ${row.revision}`
+                              : `${row.data?.currency ?? "Payment"} · ${money(
+                                  row.data?.amount ?? 0,
+                                  row.data?.currency,
+                                )}`}
+                        </small>
+                        {row.error && (
+                          <span className="error-text">{row.error}</span>
+                        )}
+                      </span>
+                      {page === "Workflows" ? (
+                        <span
+                          className={
+                            "tag " +
+                            (row.stage === "completed" ? "success" : "outline")
+                          }
+                        >
+                          {spaced(row.stage ?? "")}
                         </span>
-                        {page === "Workflows" ? (
-                          <Icon
-                            name={row.kind === "adr" ? "file" : "compass"}
-                            size={16}
-                          />
-                        ) : page === "Payments" ? (
-                          <span className={"tag " + paymentTone(state)}>
-                            {(state ?? "unknown").toLowerCase()}
-                          </span>
-                        ) : (
-                          <Icon name="file" size={16} />
-                        )}
-                      </div>
-                      <strong>
-                        {row.input?.title ?? row.title ?? row.external_id}
-                      </strong>
-                      <small>
-                        {page === "Workflows" ? (
-                          <span className="tag outline">
-                            {spaced(row.stage ?? "")}
-                          </span>
-                        ) : page === "Payments" ? (
-                          <span className="amount">
-                            {money(row.data?.amount ?? 0, row.data?.currency)}
-                          </span>
-                        ) : (
-                          `Revision ${row.revision}`
-                        )}
-                      </small>
-                      {row.error && (
-                        <span className="error-text">{row.error}</span>
+                      ) : page === "Payments" ? (
+                        <span className={"tag " + paymentTone(state)}>
+                          {(state ?? "unknown").toLowerCase()}
+                        </span>
+                      ) : (
+                        <Icon
+                          name="chevron-right"
+                          size={16}
+                          className="record-chevron"
+                        />
                       )}
                     </button>
                   );

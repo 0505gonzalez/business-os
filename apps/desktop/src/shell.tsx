@@ -153,7 +153,7 @@ export function EmptyState({
   role?: string;
 }) {
   return (
-    <article className="card empty" role={role}>
+    <article className="empty" role={role}>
       <span className="empty-icon" aria-hidden="true">
         <Icon name={icon} size={20} />
       </span>

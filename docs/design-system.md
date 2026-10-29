@@ -7,14 +7,14 @@ The desktop UI is built from tokens, not ad-hoc values. `apps/desktop/src/tokens
 The window is a canvas (`--bg-canvas`) that extends under the macOS title bar (`titleBarStyle: hiddenInset`). The top strip (`--titlebar-h`) is a drag region and holds the profile button on the right. Three cards sit on the canvas:
 
 - **Sidebar** (`.sidebar`): brand, workspace switcher, section nav with icons, Settings pinned at the bottom.
-- **Content** (`.content`): the page itself, rendered directly on the canvas with a page header (`.page-title`, `.page-subtitle`, `.page-actions`) and content cards.
+- **Content** (`.content`): the page itself, rendered directly on the canvas with a page header (`.page-title`, `.page-subtitle`, `.page-actions`). Content is not boxed: lists are plain rows (the selected one lifts), master-detail splits on a hairline, and Team and Settings are sections separated by hairlines. The Workflows canvas is a dotted field on the background whose edges fade out; only its nodes are cards. Reserve `.card` for the sidebar, the agent panel, modals, canvas nodes, and small callouts such as an invitation code.
 - **Agent panel** (`.agent-panel`): a docked column when expanded; a floating pill when collapsed. The pill keeps showing the agent's status while it works. Below 1280px the expanded panel floats over the content instead of taking a column.
 
 ## Primitives
 
 | Need | Use |
 | --- | --- |
-| Surface | `.card` (`.card.pad` adds padding) |
+| Surface | `.card` (`.card.pad` adds padding), used sparingly per the layout rules above |
 | Buttons | `.btn`, `.btn.primary`, `.btn.ghost`, `.btn.danger`, `.btn.icon`, size `.sm`; `.chip` for small toggles |
 | Labels | `.tag` with `.outline`, `.success`, `.warning`, `.danger`, `.accent`, `.plain` |
 | Section labels | `.eyebrow` |

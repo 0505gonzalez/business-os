@@ -113,7 +113,7 @@ export function Team({
           {error}
         </div>
       )}
-      <article className="card">
+      <article>
         <div className="team-heading">
           <h2>
             Members <small>{members.length}</small>
@@ -232,7 +232,7 @@ export function Team({
       </article>
       {role === "owner" && (
         <>
-          <article className="card">
+          <article>
             <h2>Invite a teammate</h2>
             <p>
               Create a single-use code and share it privately. Anyone with the
@@ -330,7 +330,7 @@ export function Team({
               </div>
             )}
           </article>
-          <article className="card">
+          <article>
             <h2>Invitations</h2>
             {!invites.length && <p>No invitations yet.</p>}
             {invites.map((i) => (

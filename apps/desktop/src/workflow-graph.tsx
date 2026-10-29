@@ -3,6 +3,7 @@ import { Icon } from "./icons.js";
 type Row = Record<string, any>;
 type Transform = { x: number; y: number; k: number };
 const PAD = 32;
+const EDGE = 64;
 const LANE_H = 140;
 const TITLE_W = 248;
 const GAP = 56;
@@ -67,14 +68,14 @@ export function WorkflowGraph({
     const el = viewport.current;
     if (!el) return;
     const k = clamp(
-      Math.min((el.clientWidth - PAD * 2) / width, 1),
+      Math.min((el.clientWidth - EDGE * 2) / width, 1),
       FIT_MIN_K,
       MAX_K,
     );
     setT({
       k,
-      x: Math.max(PAD, (el.clientWidth - width * k) / 2),
-      y: Math.max(PAD, (el.clientHeight - height * k) / 2),
+      x: Math.max(EDGE, (el.clientWidth - width * k) / 2),
+      y: Math.max(PAD + PAD / 2, (el.clientHeight - height * k) / 2),
     });
   }, [width, height]);
   useEffect(fit, [fit, rows.length]);
@@ -113,125 +114,133 @@ export function WorkflowGraph({
   }, [zoomAt]);
   return (
     <div
-      className={"graph card" + (compact ? " compact" : "")}
-      ref={viewport}
-      role="group"
-      aria-label="Workflow canvas"
+      className={"graph" + (compact ? " compact" : "")}
       style={{
-        backgroundSize: `${24 * t.k}px ${24 * t.k}px`,
-        backgroundPosition: `${t.x}px ${t.y}px`,
         height: compact
           ? undefined
           : `clamp(260px, ${height + PAD * 3}px, min(56vh, 640px))`,
       }}
-      onPointerDown={(e) => {
-        if ((e.target as HTMLElement).closest("button")) return;
-        drag.current = { px: e.clientX, py: e.clientY, x: t.x, y: t.y };
-        e.currentTarget.setPointerCapture(e.pointerId);
-        e.currentTarget.classList.add("dragging");
-      }}
-      onPointerMove={(e) => {
-        const d = drag.current;
-        if (!d) return;
-        setT((prev) => ({
-          ...prev,
-          x: d.x + (e.clientX - d.px),
-          y: d.y + (e.clientY - d.py),
-        }));
-      }}
-      onPointerUp={(e) => {
-        drag.current = null;
-        e.currentTarget.classList.remove("dragging");
-      }}
-      onPointerCancel={(e) => {
-        drag.current = null;
-        e.currentTarget.classList.remove("dragging");
-      }}
     >
       <div
-        className="graph-layer"
-        style={{ transform: `translate(${t.x}px, ${t.y}px) scale(${t.k})` }}
+        className="graph-viewport"
+        ref={viewport}
+        role="group"
+        aria-label="Workflow canvas"
+        style={{
+          backgroundSize: `${24 * t.k}px ${24 * t.k}px`,
+          backgroundPosition: `${t.x}px ${t.y}px`,
+        }}
+        onPointerDown={(e) => {
+          if ((e.target as HTMLElement).closest("button")) return;
+          drag.current = { px: e.clientX, py: e.clientY, x: t.x, y: t.y };
+          e.currentTarget.setPointerCapture(e.pointerId);
+          e.currentTarget.classList.add("dragging");
+        }}
+        onPointerMove={(e) => {
+          const d = drag.current;
+          if (!d) return;
+          setT((prev) => ({
+            ...prev,
+            x: d.x + (e.clientX - d.px),
+            y: d.y + (e.clientY - d.py),
+          }));
+        }}
+        onPointerUp={(e) => {
+          drag.current = null;
+          e.currentTarget.classList.remove("dragging");
+        }}
+        onPointerCancel={(e) => {
+          drag.current = null;
+          e.currentTarget.classList.remove("dragging");
+        }}
       >
-        {lanes.map((lane) => {
-          const trackWidth = GAP + (lane.stages.length - 1) * STEP;
-          const doneWidth =
-            lane.current <= 0 ? 0 : GAP + (lane.current - 1) * STEP + STEP / 2;
-          return (
-            <div
-              className="graph-lane"
-              key={lane.id}
-              style={{ top: lane.y, width: TITLE_W + trackWidth }}
-            >
-              <button
-                className={
-                  "graph-node" +
-                  (selected === lane.id ? " active" : "") +
-                  (lane.pending ? " pending" : "")
-                }
-                onClick={() => onSelect(lane.id)}
-              >
-                <div className="record-head">
-                  <span className="eyebrow">
-                    {lane.row.kind === "adr"
-                      ? "ADR review"
-                      : "Feature planning"}
-                  </span>
-                  <Icon
-                    name={lane.row.kind === "adr" ? "file" : "compass"}
-                    size={16}
-                  />
-                </div>
-                <strong>{lane.row.input?.title ?? lane.row.id}</strong>
-                <small>
-                  {lane.pending ? (
-                    <span className="tag warning">
-                      <Icon name="inbox" size={12} />
-                      Needs you
-                    </span>
-                  ) : lane.row.error ? (
-                    <span className="tag danger">Needs attention</span>
-                  ) : lane.row.stage === "completed" ? (
-                    <span className="tag success">Completed</span>
-                  ) : (
-                    <span className="tag outline">
-                      {spaced(lane.row.stage ?? "")}
-                    </span>
-                  )}
-                </small>
-              </button>
+        <div
+          className="graph-layer"
+          style={{ transform: `translate(${t.x}px, ${t.y}px) scale(${t.k})` }}
+        >
+          {lanes.map((lane) => {
+            const trackWidth = GAP + (lane.stages.length - 1) * STEP;
+            const doneWidth =
+              lane.current <= 0
+                ? 0
+                : GAP + (lane.current - 1) * STEP + STEP / 2;
+            return (
               <div
-                className="graph-track"
-                style={{ left: TITLE_W, width: trackWidth }}
+                className="graph-lane"
+                key={lane.id}
+                style={{ top: lane.y, width: TITLE_W + trackWidth }}
               >
-                <div
-                  className="graph-track-done"
-                  style={{ width: doneWidth }}
-                />
-                {lane.stages.map((stage, j) => (
-                  <div
-                    className={
-                      "graph-step" +
-                      (j < lane.current
-                        ? " done"
-                        : j === lane.current
-                          ? " current"
-                          : "")
-                    }
-                    key={stage}
-                    style={{ left: GAP + j * STEP }}
-                  >
-                    <span className="graph-dot">
-                      {j < lane.current && (
-                        <Icon name="check" size={10} strokeWidth={3} />
-                      )}
+                <button
+                  className={
+                    "graph-node" +
+                    (selected === lane.id ? " active" : "") +
+                    (lane.pending ? " pending" : "")
+                  }
+                  onClick={() => onSelect(lane.id)}
+                >
+                  <div className="node-head">
+                    <span className="eyebrow">
+                      {lane.row.kind === "adr"
+                        ? "ADR review"
+                        : "Feature planning"}
                     </span>
-                    <span className="graph-label">{spaced(stage)}</span>
+                    <Icon
+                      name={lane.row.kind === "adr" ? "file" : "compass"}
+                      size={16}
+                    />
                   </div>
-                ))}
+                  <strong>{lane.row.input?.title ?? lane.row.id}</strong>
+                  <small>
+                    {lane.pending ? (
+                      <span className="tag warning">
+                        <Icon name="inbox" size={12} />
+                        Needs you
+                      </span>
+                    ) : lane.row.error ? (
+                      <span className="tag danger">Needs attention</span>
+                    ) : lane.row.stage === "completed" ? (
+                      <span className="tag success">Completed</span>
+                    ) : (
+                      <span className="tag outline">
+                        {spaced(lane.row.stage ?? "")}
+                      </span>
+                    )}
+                  </small>
+                </button>
+                <div
+                  className="graph-track"
+                  style={{ left: TITLE_W, width: trackWidth }}
+                >
+                  <div
+                    className="graph-track-done"
+                    style={{ width: doneWidth }}
+                  />
+                  {lane.stages.map((stage, j) => (
+                    <div
+                      className={
+                        "graph-step" +
+                        (j < lane.current
+                          ? " done"
+                          : j === lane.current
+                            ? " current"
+                            : "")
+                      }
+                      key={stage}
+                      style={{ left: GAP + j * STEP }}
+                    >
+                      <span className="graph-dot">
+                        {j < lane.current && (
+                          <Icon name="check" size={10} strokeWidth={3} />
+                        )}
+                      </span>
+                      <span className="graph-label">{spaced(stage)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       <div className="graph-controls">
         <button
